@@ -210,11 +210,12 @@
       <div class="gate-no">3</div>
       <div class="gate-title-wrap">
         <div class="gate-title">情境關 — 悲觀／中性／樂觀，現價落在哪裡</div>
-        <div class="gate-desc">三種情境自己設定，這塊沒有API可以自動抓，屬於你的判斷。</div>
+        <div class="gate-desc">三種情境EPS自己設定；本益比不用憑感覺猜——下面會用「同產業其他上市公司目前本益比」的中位數自動帶入，載板/AI類股本益比正常就是偏高，零售/傳產正常就是偏低，不用同一套標準套所有產業。</div>
       </div>
       <div class="status-pill" id="pill3">待檢查</div>
     </div>
     <div class="gate-body">
+      <div class="flag" id="industryNote" style="border-color:var(--good-line); background:var(--good-bg); color:var(--good);" hidden></div>
       <div class="formula"><b>情境股價</b> = 情境 EPS × 情境本益比　｜　現價需 ≤ 中性股價 × 容忍度，才算沒有超漲</div>
       <div class="field-grid">
         <div class="field"><label>悲觀 EPS</label><input id="g3-eps-bear" type="number" step="0.01"></div>
@@ -351,14 +352,56 @@ function valueAt(rows, type, date){
 }
 
 let stockInfoCache = null;
-async function resolveStockId(raw){
-  // 純數字代號直接用；輸入公司名稱時，查FinMind股票清單比對名稱
-  const digits = raw.replace(/\D/g,'');
-  if(digits && digits===raw) return {id: digits, name: null};
+let bwibbuCache = null; // 證交所官方「個股日本益比」全市場清單，key=代號
+let industryPeResult = null; // {industry, median, n}
+
+async function ensureStockInfoCache(){
   if(!stockInfoCache){
     const j = await fetchJSON(`${FINMIND}?dataset=TaiwanStockInfo`);
     stockInfoCache = (j && j.data) ? j.data : [];
   }
+  return stockInfoCache;
+}
+async function ensureBwibbuCache(){
+  if(!bwibbuCache){
+    const j = await fetchJSON('https://www.twse.com.tw/exchangeReport/BWIBBU_ALL?response=json');
+    bwibbuCache = {};
+    if(j && j.data){
+      j.data.forEach(row=>{
+        const pe = parseFloat(row[2]);
+        if(!isNaN(pe) && pe>0) bwibbuCache[row[0]] = pe;
+      });
+    }
+  }
+  return bwibbuCache;
+}
+function median(arr){
+  if(!arr.length) return null;
+  const s=[...arr].sort((a,b)=>a-b);
+  const mid=Math.floor(s.length/2);
+  return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+}
+// 用「同產業其他上市公司目前本益比」的中位數，取代固定不變的本益比假設——
+// 載板/AI類股本益比正常就是偏高，零售/傳產正常就是偏低，不該用同一套門檻套所有產業
+async function fetchIndustryPE(stockNo){
+  try{
+    const info = await ensureStockInfoCache();
+    const self = info.find(r=>r.stock_id===stockNo);
+    if(!self || !self.industry_category) return null;
+    const peers = info.filter(r=>r.industry_category===self.industry_category).map(r=>r.stock_id);
+    const bwibbu = await ensureBwibbuCache();
+    const pes = [...new Set(peers)].map(id=>bwibbu[id]).filter(v=>v!==undefined && v>0 && v<150);
+    const med = median(pes);
+    if(med===null) return null;
+    return {industry: self.industry_category, median: med, n: pes.length};
+  }catch(e){ return null; }
+}
+
+async function resolveStockId(raw){
+  // 純數字代號直接用；輸入公司名稱時，查FinMind股票清單比對名稱
+  const digits = raw.replace(/\D/g,'');
+  if(digits && digits===raw) return {id: digits, name: null};
+  await ensureStockInfoCache();
   const needle = raw.trim();
   let hit = stockInfoCache.find(r=>r.stock_name===needle);
   if(!hit) hit = stockInfoCache.find(r=>r.stock_name && r.stock_name.includes(needle));
@@ -486,6 +529,22 @@ async function runAutoFetch(){
         setVal('g1-netdebt', billion(st+lt-cash));
         setHint('g1-netdebt','FinMind 資產負債表 '+d0+'（短期+長期借款−現金）');
       }
+    }
+
+    // 4) 同產業本益比中位數（取代固定不變的PE假設）
+    industryPeResult = await fetchIndustryPE(stockNo);
+    const noteEl = document.getElementById('industryNote');
+    if(industryPeResult){
+      noteEl.hidden = false;
+      noteEl.innerHTML = '📊 <span><b>同產業（'+industryPeResult.industry+'）本益比中位數：'+fmtNum(industryPeResult.median,1)+' 倍</b>（取樣'+industryPeResult.n+'家同類股，資料來源：證交所官方個股本益比 + FinMind產業分類，'+new Date().toISOString().slice(0,10)+'）。下面三個本益比欄位已用這個中位數自動帶入，覺得不合理可以直接改。</span>';
+      const bearPe=document.getElementById('g3-pe-bear'), basePe=document.getElementById('g3-pe-base'), bullPe=document.getElementById('g3-pe-bull');
+      if(!bearPe.value) setVal('g3-pe-bear', industryPeResult.median*0.75);
+      if(!basePe.value) setVal('g3-pe-base', industryPeResult.median);
+      if(!bullPe.value) setVal('g3-pe-bull', industryPeResult.median*1.25);
+    } else {
+      noteEl.hidden = false;
+      noteEl.style.borderColor='var(--warn-line)'; noteEl.style.background='var(--warn-bg)'; noteEl.style.color='var(--warn)';
+      noteEl.innerHTML = '⚠️ <span>查無同產業本益比可參考（可能證交所當日沒收錄這檔股票，或產業分類查無同類股），情境關的本益比請自行判斷填入。</span>';
     }
 
     document.getElementById('tickerName').value = stockNo;
