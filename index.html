@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>投資決策工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --ink:#1c2333; --paper:#f6f1e6; --paper-2:#efe6d2; --card:#fffdf8; --line:#ddd0ac;
+    --text:#211b12; --text-soft:#6d6047; --accent:#a8791f; --accent-deep:#7c5714; --accent-soft:#f1e2bd;
+    --good:#3c6e4a; --good-bg:#e2eee1; --good-line:#a9cba9;
+    --bad:#a3402a; --bad-bg:#f6e2d9; --bad-line:#dba58f;
+    --warn:#9a6c14; --warn-bg:#f4e7c4; --warn-line:#dcc07a;
+    --lock:#9b9078;
+    --shadow: 0 1px 2px rgba(40,30,10,.06), 0 6px 20px -10px rgba(40,30,10,.25);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#f1ede2; --paper:#141821; --paper-2:#1b2029; --card:#1c212b; --line:#333a47;
+      --text:#eceadd; --text-soft:#9aa0ad; --accent:#dcb35a; --accent-deep:#f0cf8c; --accent-soft:#3a3320;
+      --good:#7fbf8f; --good-bg:#16261c; --good-line:#2e4a37;
+      --bad:#e28a6f; --bad-bg:#2c1c17; --bad-line:#4a2e25;
+      --warn:#e0bd6b; --warn-bg:#2c2413; --warn-line:#4a3d20;
+      --lock:#5a6272; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 24px -10px rgba(0,0,0,.6);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--text); font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif; padding-inline:16px; padding-block:26px 60px;}
+  h1,h2,h3{font-family:"Noto Serif TC",serif; margin:0;}
+  .mono{font-family:"JetBrains Mono",monospace;}
+  .wrap{max-width:860px; margin:0 auto; display:flex; flex-direction:column; gap:20px;}
+  .masthead{display:flex; flex-direction:column; gap:10px; padding-bottom:16px; border-bottom:2px solid var(--line);}
+  .eyebrow{font-size:12px; letter-spacing:.14em; color:var(--accent-deep); font-weight:700;}
+  h1{font-size:clamp(22px,5vw,30px); font-weight:900;}
+  .sub{color:var(--text-soft); font-size:13.5px; line-height:1.7; max-width:68ch;}
+
+  .searchbar{display:flex; gap:8px; flex-wrap:wrap; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:var(--shadow);}
+  .searchbar input{flex:1; min-width:140px; font:inherit; font-family:"JetBrains Mono",monospace; font-size:16px; padding:10px 12px; border-radius:9px; border:1px solid var(--line); background:var(--paper); color:var(--text);}
+  .searchbar button{font:inherit; font-weight:700; font-size:14px; cursor:pointer; background:var(--accent-deep); color:var(--paper); border:none; padding:10px 18px; border-radius:9px;}
+  .searchbar button:hover{opacity:.88;}
+  .searchbar button:disabled{opacity:.5; cursor:not-allowed;}
+  .search-status{font-size:12.5px; color:var(--text-soft); flex-basis:100%;}
+  .search-status.err{color:var(--bad);}
+  .search-status.ok{color:var(--good);}
+
+  .case-badge{display:inline-flex; align-items:center; gap:8px; align-self:flex-start; flex-wrap:wrap; background:var(--accent-soft); color:var(--accent-deep); border:1px solid var(--accent); border-radius:999px; padding:5px 8px 5px 14px; font-size:13px; font-weight:700;}
+  .case-badge input{font:inherit; font-weight:700; color:var(--accent-deep); background:var(--card); border:1px solid var(--accent); border-radius:999px; padding:4px 12px; min-width:0;}
+  .case-badge input#tickerName{width:14ch;}
+  .case-badge input#dataDate{width:24ch;}
+  .case-badge .sep{color:var(--accent);}
+
+  .rail{position:sticky; top:8px; z-index:5; display:flex; gap:8px; background:var(--paper); padding-block:10px 4px;}
+  .step{flex:1; display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center;}
+  .step .bar{height:6px; width:100%; border-radius:4px; background:var(--line); transition:background .25s;}
+  .step .lbl{font-size:11px; color:var(--text-soft); font-weight:500;}
+  .step[data-state="pass"] .bar{background:var(--good);}
+  .step[data-state="fail"] .bar{background:var(--bad);}
+  .step[data-state="pass"] .lbl,.step[data-state="fail"] .lbl{color:var(--text); font-weight:700;}
+
+  .gate{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); overflow:hidden;}
+  .gate-head{display:flex; align-items:flex-start; gap:14px; padding:20px 20px 16px; border-bottom:1px solid var(--line);}
+  .gate-no{font-family:"Noto Serif TC",serif; font-weight:900; font-size:22px; color:var(--accent); width:38px; height:38px; border:2px solid var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none;}
+  .gate-title-wrap{flex:1; display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .gate-title{font-size:19px; font-weight:700;}
+  .gate-desc{font-size:13px; color:var(--text-soft); line-height:1.6;}
+  .status-pill{flex:none; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; border:1px solid var(--line); color:var(--text-soft); background:var(--paper-2); white-space:nowrap;}
+  .status-pill[data-state="pass"]{color:var(--good); background:var(--good-bg); border-color:var(--good-line);}
+  .status-pill[data-state="fail"]{color:var(--bad); background:var(--bad-bg); border-color:var(--bad-line);}
+
+  .gate-body{padding:18px 20px 22px; display:flex; flex-direction:column; gap:18px;}
+  .formula{background:var(--paper-2); border:1px dashed var(--line); border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.9; color:var(--text-soft);}
+  .formula b{color:var(--text); font-weight:700;}
+
+  .field-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:12px; color:var(--text-soft); font-weight:500;}
+  .field .hint{font-size:10.5px; color:var(--lock);}
+  .field input{font:inherit; font-family:"JetBrains Mono",monospace; font-size:14px; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--text); width:100%;}
+  .field input.auto{border-color:var(--good-line); background:var(--good-bg);}
+
+  .btn-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+  button.check{font:inherit; font-weight:700; font-size:13.5px; cursor:pointer; background:var(--accent-deep); color:var(--paper); border:none; padding:10px 18px; border-radius:9px;}
+  button.check:hover{opacity:.85;}
+  .verdict-line{font-size:12.5px; color:var(--text-soft);}
+
+  .result-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px;}
+  .result{border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; background:var(--paper-2);}
+  .result .k{font-size:11.5px; color:var(--text-soft);}
+  .result .v{font-size:17px; font-weight:700;}
+  .result[data-ok="1"]{background:var(--good-bg); border-color:var(--good-line);} .result[data-ok="1"] .v{color:var(--good);}
+  .result[data-ok="0"]{background:var(--bad-bg); border-color:var(--bad-line);} .result[data-ok="0"] .v{color:var(--bad);}
+  .result .th{font-size:10.5px; color:var(--text-soft);}
+
+  .flag{display:flex; gap:8px; padding:10px 12px; border-radius:10px; font-size:12.5px; line-height:1.6; border:1px solid var(--warn-line); background:var(--warn-bg); color:var(--warn);}
+
+  .cdp-row{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+  .cdp-cell{text-align:center; padding:10px 4px; border-radius:10px; border:1px solid var(--line); background:var(--paper-2); display:flex; flex-direction:column; gap:4px;}
+  .cdp-cell .k{font-size:11px; color:var(--text-soft); font-weight:700;}
+  .cdp-cell .v{font-size:15px; font-weight:700;}
+  .cdp-cell.center{border-color:var(--accent); background:var(--accent-soft); color:var(--accent-deep);} .cdp-cell.center .v{color:var(--accent-deep);}
+  @media (max-width:520px){ .cdp-row{grid-template-columns:repeat(3,1fr);} }
+
+  .verdict{border-radius:18px; padding:24px 22px; display:flex; flex-direction:column; gap:14px; border:2px solid var(--line); background:var(--card); box-shadow:var(--shadow);}
+  .verdict[data-state="go"]{border-color:var(--good-line); background:var(--good-bg);}
+  .verdict[data-state="no"]{border-color:var(--bad-line); background:var(--bad-bg);}
+  .verdict[data-state="watch"]{border-color:var(--warn-line); background:var(--warn-bg);}
+  .verdict-top{display:flex; align-items:center; gap:12px;}
+  .verdict-badge{font-size:26px; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--paper-2); flex:none;}
+  .verdict[data-state="go"] .verdict-badge{background:var(--good); color:var(--card);}
+  .verdict[data-state="no"] .verdict-badge{background:var(--bad); color:var(--card);}
+  .verdict[data-state="watch"] .verdict-badge{background:var(--warn); color:var(--card);}
+  .verdict-headline{font-size:20px; font-weight:900; font-family:"Noto Serif TC",serif;}
+  .verdict-sub{font-size:13.5px; color:var(--text-soft);}
+  .checklist{display:flex; flex-direction:column; gap:6px;}
+  .checklist .item{display:flex; align-items:center; gap:8px; font-size:13.5px;}
+  .checklist .mark{width:18px; height:18px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; flex:none; background:var(--line); color:var(--paper);}
+  .checklist .item[data-ok="1"] .mark{background:var(--good);}
+  .checklist .item[data-ok="0"] .mark{background:var(--bad);}
+
+  .disclaimer{font-size:11.5px; color:var(--text-soft); line-height:1.8; border-top:1px solid var(--line); padding-top:14px;}
+  .footnote{font-size:11px; color:var(--lock); text-align:center; padding-top:6px;}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">投資決策工作台（GitHub Pages 版）</div>
+    <h1>輸入代號 → 自動抓財報 → 四關驗證</h1>
+    <p class="sub">這個版本跑在你自己的瀏覽器裡，直接向 FinMind（財報/月營收/股利）與台灣證交所官方 OpenAPI（股價）發請求，不用再手動逐個網站比對。抓不到或查無資料的欄位會保留空白讓你自己補，絕不會用猜的數字悄悄填上。</p>
+  </header>
+
+  <div class="searchbar">
+    <input id="searchTicker" placeholder="輸入股票代號，例如 2330" inputmode="numeric">
+    <button id="searchBtn" onclick="runAutoFetch()">查詢並自動填入</button>
+    <div class="search-status" id="searchStatus"></div>
+  </div>
+
+  <div class="case-badge">
+    <span class="dot"></span>分析標的
+    <input id="tickerName" value="" placeholder="尚未查詢" aria-label="分析標的名稱">
+    <span class="sep">·</span>最新收盤日
+    <input id="dataDate" value="" placeholder="尚未查詢" aria-label="資料日期">
+  </div>
+
+  <nav class="rail" id="rail">
+    <div class="step" data-state="idle" id="step-1"><div class="bar"></div><div class="lbl">① 品質</div></div>
+    <div class="step" data-state="idle" id="step-2"><div class="bar"></div><div class="lbl">② 估值</div></div>
+    <div class="step" data-state="idle" id="step-3"><div class="bar"></div><div class="lbl">③ 情境</div></div>
+    <div class="step" data-state="idle" id="step-4"><div class="bar"></div><div class="lbl">④ 風控</div></div>
+  </nav>
+
+  <!-- GATE 1 -->
+  <section class="gate" id="gate1">
+    <div class="gate-head">
+      <div class="gate-no">1</div>
+      <div class="gate-title-wrap">
+        <div class="gate-title">品質關 — 這家公司底子夠不夠硬</div>
+        <div class="gate-desc">毛利率有沒有惡化、現金含金量夠不夠、財務結構穩不穩。綠色框代表由 FinMind 財報自動抓到的真實數字。</div>
+      </div>
+      <div class="status-pill" id="pill1">待檢查</div>
+    </div>
+    <div class="gate-body">
+      <div class="formula"><b>毛利率趨勢</b> = 本季毛利率 − 上季毛利率　｜　<b>盈餘含金量</b> = OCF ÷ 稅後淨利　｜　<b>淨負債/EBITDA</b> = (短期+長期借款−現金) ÷ EBITDA　｜　<b>利息保障倍數</b> = EBIT ÷ 利息費用</div>
+      <div class="field-grid">
+        <div class="field"><label>本季毛利率 (%)</label><input id="g1-gm-now" type="number" step="0.01"><span class="hint" id="hint-g1-gm-now"></span></div>
+        <div class="field"><label>上季毛利率 (%)</label><input id="g1-gm-prev" type="number" step="0.01"><span class="hint" id="hint-g1-gm-prev"></span></div>
+        <div class="field"><label>營業現金流 OCF (億元)</label><input id="g1-ocf" type="number" step="0.01"><span class="hint" id="hint-g1-ocf"></span></div>
+        <div class="field"><label>稅後淨利 (億元)</label><input id="g1-ni" type="number" step="0.01"><span class="hint" id="hint-g1-ni"></span></div>
+        <div class="field"><label>淨負債 (億元，負值=淨現金)</label><input id="g1-netdebt" type="number" step="0.01"><span class="hint" id="hint-g1-netdebt"></span></div>
+        <div class="field"><label>EBITDA (億元)</label><input id="g1-ebitda" type="number" step="0.01"><span class="hint" id="hint-g1-ebitda"></span></div>
+        <div class="field"><label>EBIT (億元)</label><input id="g1-ebit" type="number" step="0.01"><span class="hint" id="hint-g1-ebit"></span></div>
+        <div class="field"><label>利息費用 (億元)</label><input id="g1-interest" type="number" step="0.01"><span class="hint" id="hint-g1-interest"></span></div>
+      </div>
+      <div class="btn-row" style="justify-content:space-between;"><button class="check" onclick="computeGate(1)">檢查這一關</button><span class="verdict-line" id="line1"></span></div>
+      <div class="result-grid" id="res1"></div>
+    </div>
+  </section>
+
+  <!-- GATE 2 -->
+  <section class="gate" id="gate2">
+    <div class="gate-head">
+      <div class="gate-no">2</div>
+      <div class="gate-title-wrap">
+        <div class="gate-title">估值關 — 用「未來」算 PEG，不是用「過去」</div>
+        <div class="gate-desc">未來預估EPS查無公開共識API，此欄位需要你自己填（法人報告、公司財測或你自己的估算）。</div>
+      </div>
+      <div class="status-pill" id="pill2">待檢查</div>
+    </div>
+    <div class="gate-body">
+      <div class="formula"><b>PEG</b> = 本益比(PE) ÷ 預估EPS成長率(G)　｜　PEG&lt;1 便宜　PEG≈1 合理　PEG&gt;1.2 偏貴</div>
+      <div class="field-grid">
+        <div class="field"><label>目前股價</label><input id="g2-price" type="number" step="0.01"><span class="hint" id="hint-g2-price"></span></div>
+        <div class="field"><label>近四季 EPS 總和</label><input id="g2-eps-ttm" type="number" step="0.01"><span class="hint" id="hint-g2-eps-ttm"></span></div>
+        <div class="field"><label>去年全年 EPS</label><input id="g2-eps-last" type="number" step="0.01"><span class="hint" id="hint-g2-eps-last"></span></div>
+        <div class="field"><label>未來一年預估 EPS</label><input id="g2-eps-fwd" type="number" step="0.01"><span class="hint">⚠️查無共識API，請自行填入法人預估或你的估算</span></div>
+      </div>
+      <div class="result-grid" id="res2"></div>
+      <div class="flag" id="flag2" hidden>⚠️ <span><b>價值陷阱警訊：</b>用「去年成長率」算出來的 PEG 看起來便宜，但用「明年預估成長率」算卻偏貴，代表成長動能放緩，最終判斷以未來 PEG 為準。</span></div>
+      <div class="btn-row" style="justify-content:space-between;"><button class="check" onclick="computeGate(2)">檢查這一關</button><span class="verdict-line" id="line2"></span></div>
+    </div>
+  </section>
+
+  <!-- GATE 3 -->
+  <section class="gate" id="gate3">
+    <div class="gate-head">
+      <div class="gate-no">3</div>
+      <div class="gate-title-wrap">
+        <div class="gate-title">情境關 — 悲觀／中性／樂觀，現價落在哪裡</div>
+        <div class="gate-desc">三種情境自己設定，這塊沒有API可以自動抓，屬於你的判斷。</div>
+      </div>
+      <div class="status-pill" id="pill3">待檢查</div>
+    </div>
+    <div class="gate-body">
+      <div class="formula"><b>情境股價</b> = 情境 EPS × 情境本益比　｜　現價需 ≤ 中性股價 × 容忍度，才算沒有超漲</div>
+      <div class="field-grid">
+        <div class="field"><label>悲觀 EPS</label><input id="g3-eps-bear" type="number" step="0.01"></div>
+        <div class="field"><label>悲觀本益比</label><input id="g3-pe-bear" type="number" step="0.5"></div>
+        <div class="field"><label>中性 EPS</label><input id="g3-eps-base" type="number" step="0.01"></div>
+        <div class="field"><label>中性本益比</label><input id="g3-pe-base" type="number" step="0.5"></div>
+        <div class="field"><label>樂觀 EPS</label><input id="g3-eps-bull" type="number" step="0.01"></div>
+        <div class="field"><label>樂觀本益比</label><input id="g3-pe-bull" type="number" step="0.5"></div>
+        <div class="field"><label>容忍度 (%)</label><input id="g3-tolerance" type="number" step="1" value="10"></div>
+      </div>
+      <div class="result-grid" id="res3"></div>
+      <div class="btn-row" style="justify-content:space-between;"><button class="check" onclick="computeGate(3)">檢查這一關</button><span class="verdict-line" id="line3"></span></div>
+    </div>
+  </section>
+
+  <!-- GATE 4 -->
+  <section class="gate" id="gate4">
+    <div class="gate-head">
+      <div class="gate-no">4</div>
+      <div class="gate-title-wrap">
+        <div class="gate-title">風控關 — CDP 觀察價位 + 部位大小</div>
+        <div class="gate-desc">H/L/C 由證交所官方 OpenAPI 的最新一筆交易日資料自動帶入。</div>
+      </div>
+      <div class="status-pill" id="pill4">待檢查</div>
+    </div>
+    <div class="gate-body">
+      <div class="formula">CDP=(H+L+2C)÷4　AH=CDP+(H−L)　NH=2×CDP−L　NL=2×CDP−H　AL=CDP−(H−L)</div>
+      <div class="field-grid">
+        <div class="field"><label>前一交易日最高價 H</label><input id="g4-h" type="number" step="0.01"><span class="hint" id="hint-g4-h"></span></div>
+        <div class="field"><label>前一交易日最低價 L</label><input id="g4-l" type="number" step="0.01"><span class="hint" id="hint-g4-l"></span></div>
+        <div class="field"><label>前一交易日收盤價 C</label><input id="g4-c" type="number" step="0.01"><span class="hint" id="hint-g4-c"></span></div>
+      </div>
+      <div class="cdp-row" id="cdpRow">
+        <div class="cdp-cell"><div class="k">AL</div><div class="v" id="cdp-AL">—</div></div>
+        <div class="cdp-cell"><div class="k">NL</div><div class="v" id="cdp-NL">—</div></div>
+        <div class="cdp-cell center"><div class="k">CDP</div><div class="v" id="cdp-CDP">—</div></div>
+        <div class="cdp-cell"><div class="k">NH</div><div class="v" id="cdp-NH">—</div></div>
+        <div class="cdp-cell"><div class="k">AH</div><div class="v" id="cdp-AH">—</div></div>
+      </div>
+      <div class="formula">單筆最大虧損 = 總資金 × 風險%　｜　可買股數 = min(風險限制股數, 資金上限股數)　｜　風險報酬比 = (目標價−進場價) ÷ (進場價−停損價)</div>
+      <div class="field-grid">
+        <div class="field"><label>總資金 (元)</label><input id="g4-capital" type="number" step="10000" value="1000000"></div>
+        <div class="field"><label>單筆風險承受 (%)</label><input id="g4-riskpct" type="number" step="0.1" value="1.5"></div>
+        <div class="field"><label>單一持股資金上限 (%)</label><input id="g4-caplimit" type="number" step="1" value="20"></div>
+        <div class="field"><label>進場價</label><input id="g4-entry" type="number" step="0.01"></div>
+        <div class="field"><label>停損價</label><input id="g4-stop" type="number" step="0.01"></div>
+        <div class="field"><label>目標價</label><input id="g4-target" type="number" step="0.01"></div>
+      </div>
+      <div class="result-grid" id="res4"></div>
+      <div class="btn-row" style="justify-content:space-between;"><button class="check" onclick="computeGate(4)">檢查這一關</button><span class="verdict-line" id="line4"></span></div>
+    </div>
+  </section>
+
+  <!-- FINAL VERDICT -->
+  <section class="verdict" id="verdict" data-state="no">
+    <div class="verdict-top">
+      <div class="verdict-badge" id="verdict-badge">🔒</div>
+      <div>
+        <div class="verdict-headline" id="verdict-headline">尚未完成四關檢查</div>
+        <div class="verdict-sub" id="verdict-sub">查詢代號自動帶入後，按每一關的「檢查這一關」。</div>
+      </div>
+    </div>
+    <div class="checklist" id="checklist">
+      <div class="item" data-ok="0"><span class="mark">1</span>品質關</div>
+      <div class="item" data-ok="0"><span class="mark">2</span>估值關</div>
+      <div class="item" data-ok="0"><span class="mark">3</span>情境關</div>
+      <div class="item" data-ok="0"><span class="mark">4</span>風控關</div>
+    </div>
+  </section>
+
+  <p class="disclaimer">資料來源：財報/月營收由 <b>FinMind</b>（民間整理官方公開資訊的免費API，非官方本身）自動抓取；股價與CDP用的H/L/C由<b>台灣證交所官方OpenAPI</b>自動抓取。綠色框的欄位是程式自動帶入的真實數字，沒有顏色的欄位（未來預估EPS、情境本益比等）查無可靠API，一律由你自己判斷填入，程式不會自動用猜測值填滿。若某欄位抓不到資料會顯示在查詢狀態列並保持空白。最終的「建議/觀察/不建議」是機械式算出的邏輯結果，不構成任何個股買賣建議，投資有風險，請自行判斷並承擔結果。</p>
+  <p class="footnote">四關通過 ≠ 保證獲利，只代表你的判斷邏輯有走完該走的步驟。</p>
+</div>
+
+<script>
+/* ---------------- auto-fetch: FinMind + TWSE OpenAPI ---------------- */
+const FINMIND = 'https://api.finmindtrade.com/api/v4/data';
+
+function billion(n){ return n===undefined||n===null||isNaN(n) ? null : n/1e8; }
+function fmtNum(n,d=2){ return (n===null||n===undefined||isNaN(n)) ? '—' : n.toLocaleString('zh-TW',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function setVal(id,v){ const el=document.getElementById(id); if(el && v!==null && v!==undefined && !isNaN(v)){ el.value = (Math.round(v*100)/100); el.classList.add('auto'); } }
+function setHint(id,text){ const el=document.getElementById('hint-'+id); if(el) el.textContent = text; }
+function setStatus(msg, cls){
+  const el=document.getElementById('searchStatus');
+  el.textContent = msg; el.className='search-status'+(cls? ' '+cls:'');
+}
+
+async function fetchJSON(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+
+function startDateYearsAgo(y){
+  const d = new Date(); d.setFullYear(d.getFullYear()-y);
+  return d.toISOString().slice(0,10);
+}
+
+function rocDateToISO(roc){
+  // "115/10/02" -> "2026-10-02"
+  const [y,m,d] = roc.split('/');
+  return (parseInt(y,10)+1911)+'-'+m+'-'+d;
+}
+
+async function fetchLatestTwsePrice(stockNo){
+  // try this month, fall back to previous month if empty (e.g. on the 1st–2nd of a month)
+  for(let back=0; back<=2; back++){
+    const d = new Date(); d.setMonth(d.getMonth()-back);
+    const ym = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+'01';
+    const url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date='+ym+'&stockNo='+stockNo;
+    try{
+      const j = await fetchJSON(url);
+      if(j && j.data && j.data.length){
+        const last = j.data[j.data.length-1];
+        // fields: 日期,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數
+        return {
+          dateISO: rocDateToISO(last[0]),
+          open: parseFloat(last[3]), high: parseFloat(last[4]), low: parseFloat(last[5]),
+          close: parseFloat(last[6]), change: last[7]
+        };
+      }
+    }catch(e){ /* try previous month */ }
+  }
+  return null;
+}
+
+function latestTwoByType(rows, type){
+  const filtered = rows.filter(r=>r.type===type).sort((a,b)=> a.date<b.date?1:-1);
+  return filtered.slice(0,2); // [latest, prev]
+}
+function valueAt(rows, type, date){
+  const r = rows.find(x=>x.type===type && x.date===date);
+  return r ? r.value : null;
+}
+
+async function runAutoFetch(){
+  const raw = document.getElementById('searchTicker').value.trim();
+  if(!raw){ setStatus('請輸入股票代號', 'err'); return; }
+  const stockNo = raw.replace(/\D/g,'') || raw;
+  const btn = document.getElementById('searchBtn'); btn.disabled = true;
+  setStatus('查詢中…');
+
+  try{
+    // 1) 官方股價 (TWSE OpenAPI)
+    const price = await fetchLatestTwsePrice(stockNo);
+    if(price){
+      setVal('g4-h', price.high); setHint('g4-h', '證交所官方 '+price.dateISO);
+      setVal('g4-l', price.low); setHint('g4-l', '證交所官方 '+price.dateISO);
+      setVal('g4-c', price.close); setHint('g4-c', '證交所官方 '+price.dateISO);
+      setVal('g2-price', price.close); setHint('g2-price', '證交所官方收盤 '+price.dateISO);
+      document.getElementById('dataDate').value = price.dateISO + '（證交所官方收盤）';
+      computeGate(4);
+    } else {
+      setHint('g4-h','⚠️證交所API查無本月/上月資料，請自行確認代號');
+    }
+
+    // 2) FinMind 財報
+    const start = startDateYearsAgo(2);
+    const [fs, bs, cf] = await Promise.all([
+      fetchJSON(`${FINMIND}?dataset=TaiwanStockFinancialStatements&data_id=${stockNo}&start_date=${start}`).catch(()=>null),
+      fetchJSON(`${FINMIND}?dataset=TaiwanStockBalanceSheet&data_id=${stockNo}&start_date=${start}`).catch(()=>null),
+      fetchJSON(`${FINMIND}?dataset=TaiwanStockCashFlowsStatement&data_id=${stockNo}&start_date=${start}`).catch(()=>null)
+    ]);
+
+    let gotAny = false;
+
+    if(fs && fs.data && fs.data.length){
+      gotAny = true;
+      const rows = fs.data;
+      const epsRows = rows.filter(r=>r.type==='EPS').sort((a,b)=> a.date<b.date?1:-1);
+      const revRows = rows.filter(r=>r.type==='Revenue');
+      const gpRows = rows.filter(r=>r.type==='GrossProfit');
+      const niRows = rows.filter(r=>r.type==='IncomeAfterTaxes').sort((a,b)=> a.date<b.date?1:-1);
+      const opRows = rows.filter(r=>r.type==='OperatingIncome').sort((a,b)=> a.date<b.date?1:-1);
+
+      // 近四季 EPS 總和 + 去年全年 EPS
+      if(epsRows.length>=4){
+        const ttm = epsRows.slice(0,4).reduce((s,r)=>s+r.value,0);
+        setVal('g2-eps-ttm', ttm); setHint('g2-eps-ttm','FinMind 近四季('+epsRows[3].date+'~'+epsRows[0].date+')加總');
+        // 去年全年 = 找最新一筆的年份-1，該年Q1~Q4加總（若齊全）
+        const latestYear = parseInt(epsRows[0].date.slice(0,4),10);
+        const lastYearRows = epsRows.filter(r=> parseInt(r.date.slice(0,4),10)===latestYear-1);
+        if(lastYearRows.length===4){
+          setVal('g2-eps-last', lastYearRows.reduce((s,r)=>s+r.value,0));
+          setHint('g2-eps-last','FinMind '+(latestYear-1)+'年四季加總');
+        }
+      }
+
+      // 本季/上季毛利率
+      const latestDate = gpRows.length? gpRows.sort((a,b)=> a.date<b.date?1:-1)[0].date : null;
+      if(latestDate && revRows.length>=2){
+        const sortedDates = [...new Set(gpRows.map(r=>r.date))].sort((a,b)=> a<b?1:-1);
+        if(sortedDates.length>=2){
+          const d0=sortedDates[0], d1=sortedDates[1];
+          const gm0 = valueAt(rows,'GrossProfit',d0)/valueAt(rows,'Revenue',d0)*100;
+          const gm1 = valueAt(rows,'GrossProfit',d1)/valueAt(rows,'Revenue',d1)*100;
+          setVal('g1-gm-now', gm0); setHint('g1-gm-now','FinMind 單季 '+d0+'（毛利/營收）');
+          setVal('g1-gm-prev', gm1); setHint('g1-gm-prev','FinMind 單季 '+d1);
+        }
+      }
+
+      // 稅後淨利（最新一季，單位轉為億元）
+      if(niRows.length){
+        setVal('g1-ni', billion(niRows[0].value)); setHint('g1-ni','FinMind 單季 '+niRows[0].date);
+      }
+      // EBIT ≈ 最新一季營業利益
+      if(opRows.length){
+        setVal('g1-ebit', billion(opRows[0].value)); setHint('g1-ebit','FinMind 單季營業利益 '+opRows[0].date);
+      }
+    }
+
+    if(cf && cf.data && cf.data.length){
+      gotAny = true;
+      const rows = cf.data;
+      const ocfRows = rows.filter(r=>r.type==='CashFlowsFromOperatingActivities').sort((a,b)=> a.date<b.date?1:-1);
+      const intRows = rows.filter(r=>r.type==='InterestExpense').sort((a,b)=> a.date<b.date?1:-1);
+      const depRows = rows.filter(r=>r.type==='Depreciation').sort((a,b)=> a.date<b.date?1:-1);
+      const amoRows = rows.filter(r=>r.type==='AmortizationExpense').sort((a,b)=> a.date<b.date?1:-1);
+      if(ocfRows.length){
+        setVal('g1-ocf', billion(ocfRows[0].value));
+        setHint('g1-ocf','FinMind '+ocfRows[0].date+'（公司申報格式，可能為當年累計數字，非單季）');
+      }
+      if(intRows.length){
+        setVal('g1-interest', billion(Math.abs(intRows[0].value)));
+        setHint('g1-interest','FinMind '+intRows[0].date+'（可能為累計數字）');
+      }
+      // EBITDA ≈ 最新一季EBIT + 同期累計折舊攤銷（粗估，兩者期間基礎可能不同，僅供參考）
+      const ebitEl = document.getElementById('g1-ebit');
+      if(ebitEl.value && depRows.length){
+        const dep = depRows[0].value || 0, amo = amoRows.length? amoRows[0].value : 0;
+        setVal('g1-ebitda', billion(parseFloat(ebitEl.value)*1e8 + dep + amo));
+        setHint('g1-ebitda','EBIT + 折舊('+depRows[0].date+') + 攤銷，⚠️兩者期間基礎可能不同，僅供參考');
+      }
+    }
+
+    if(bs && bs.data && bs.data.length){
+      gotAny = true;
+      const rows = bs.data;
+      const dates = [...new Set(rows.map(r=>r.date))].sort((a,b)=> a<b?1:-1);
+      if(dates.length){
+        const d0 = dates[0];
+        const cash = valueAt(rows,'CashAndCashEquivalents',d0) || 0;
+        const st = valueAt(rows,'ShorttermBorrowings',d0) || 0;
+        const lt = valueAt(rows,'LongtermBorrowings',d0) || 0;
+        setVal('g1-netdebt', billion(st+lt-cash));
+        setHint('g1-netdebt','FinMind 資產負債表 '+d0+'（短期+長期借款−現金）');
+      }
+    }
+
+    document.getElementById('tickerName').value = stockNo;
+    if(gotAny){
+      setStatus('查詢完成：綠色框為自動帶入的真實數字，沒上色的欄位（未來EPS、情境本益比）請自行判斷填入。', 'ok');
+    } else {
+      setStatus('FinMind 財報查無資料（可能代號錯誤，或該公司資料未收錄），股價仍已嘗試抓取。', 'err');
+    }
+    [1,2,3,4].forEach(n=>computeGate(n));
+  }catch(e){
+    console.error(e);
+    setStatus('查詢失敗：'+e.message+'（可能是瀏覽器跨網域限制，或API暫時無法連線，請稍後再試或自行手動填入）', 'err');
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('searchTicker').addEventListener('keydown', e=>{ if(e.key==='Enter') runAutoFetch(); });
+</script>
+
+<script>
+/* ---------------- valuation gates logic (same as four-gate tool) ---------------- */
+(function(){
+  const val = id => { const n=parseFloat(document.getElementById(id).value); return isNaN(n)?0:n; };
+  const fmt = (n,d=2) => fmtNum(n,d);
+  const setPill = (n, ok) => {
+    const p=document.getElementById('pill'+n); p.textContent= ok?'✓ 通過':'✕ 未通過'; p.setAttribute('data-state', ok?'pass':'fail');
+    document.getElementById('step-'+n).setAttribute('data-state', ok?'pass':'fail');
+  };
+  const resultCard = (container,k,v,th,ok) => {
+    const d=document.createElement('div'); d.className='result'; d.setAttribute('data-ok', ok?'1':'0');
+    d.innerHTML='<div class="k">'+k+'</div><div class="v">'+v+'</div>'+(th?'<div class="th">'+th+'</div>':'');
+    container.appendChild(d);
+  };
+  const state = {1:null,2:null,3:null,4:null};
+
+  function computeGate(n){ if(n===1) return gate1(); if(n===2) return gate2(); if(n===3) return gate3(); if(n===4) return gate4(); }
+  window.computeGate = computeGate;
+
+  function gate1(){
+    const gmNow=val('g1-gm-now'), gmPrev=val('g1-gm-prev'), ocf=val('g1-ocf'), ni=val('g1-ni');
+    const netDebt=val('g1-netdebt'), ebitda=val('g1-ebitda'), ebit=val('g1-ebit'), interest=val('g1-interest');
+    const gmTrend=gmNow-gmPrev;
+    const earningsQuality = ni!==0 ? ocf/ni : 0;
+    const leverage = ebitda!==0 ? netDebt/ebitda : 0;
+    const coverage = interest!==0 ? ebit/interest : Infinity;
+    const okGm=gmTrend>=0, okEq=earningsQuality>=0.8, okLev=leverage<=2, okCov=coverage>=3;
+    const pass = okGm && okEq && okLev && okCov;
+    const res=document.getElementById('res1'); res.innerHTML='';
+    resultCard(res,'毛利率變化',(gmTrend>=0?'+':'')+fmt(gmTrend,2)+' 個百分點','門檻 ≥ 0', okGm);
+    resultCard(res,'盈餘含金量 (OCF/淨利)',fmt(earningsQuality,2)+' 倍','門檻 ≥ 0.8', okEq);
+    resultCard(res,'淨負債/EBITDA',fmt(leverage,2)+' 倍','門檻 ≤ 2.0', okLev);
+    resultCard(res,'利息保障倍數',(coverage===Infinity?'∞':fmt(coverage,1))+' 倍','門檻 ≥ 3.0', okCov);
+    setPill(1,pass);
+    document.getElementById('line1').textContent = pass? '體質關過關。' : '至少一項指標未達門檻，體質面需留意。';
+    state[1]=pass; updateVerdict();
+  }
+  function gate2(){
+    const price=val('g2-price'), epsTtm=val('g2-eps-ttm'), epsLast=val('g2-eps-last'), epsFwd=val('g2-eps-fwd');
+    const peTtm = epsTtm!==0 ? price/epsTtm : 0, peFwd = epsFwd!==0 ? price/epsFwd : 0;
+    const gPast = epsLast!==0 ? ((epsTtm-epsLast)/Math.abs(epsLast))*100 : 0;
+    const gFwd = epsLast!==0 ? ((epsFwd-epsLast)/Math.abs(epsLast))*100 : 0;
+    const pegPast = gPast>0 ? peTtm/gPast : 0, pegFwd = gFwd>0 ? peFwd/gFwd : 0;
+    const res=document.getElementById('res2'); res.innerHTML='';
+    resultCard(res,'目前本益比 (TTM)',fmt(peTtm,1)+' 倍','','');
+    resultCard(res,'未來本益比 (Fwd)',fmt(peFwd,1)+' 倍','','');
+    resultCard(res,'過去成長率',fmt(gPast,1)+'%','近四季 vs 去年全年','');
+    resultCard(res,'未來預估成長率',fmt(gFwd,1)+'%','明年預估 vs 去年全年','');
+    resultCard(res,'PEG（用過去算，會失真）',fmt(pegPast,2),'僅供對照', pegPast<=1.2);
+    resultCard(res,'PEG（用未來算，採用此值）',fmt(pegFwd,2),'門檻 ≤ 1.2', pegFwd<=1.2 && pegFwd>0);
+    const pass = pegFwd>0 && pegFwd<=1.2;
+    document.getElementById('flag2').hidden = !(pegPast<=1.2 && !pass);
+    setPill(2,pass);
+    document.getElementById('line2').textContent = pass? '未來 PEG 落在合理區間。' : '未來 PEG 偏高，估值偏貴。';
+    state[2]=pass; updateVerdict();
+  }
+  function gate3(){
+    const price=val('g2-price');
+    const epsBear=val('g3-eps-bear'), peBear=val('g3-pe-bear'), epsBase=val('g3-eps-base'), peBase=val('g3-pe-base');
+    const epsBull=val('g3-eps-bull'), peBull=val('g3-pe-bull'), tolerance=val('g3-tolerance');
+    const pBear=epsBear*peBear, pBase=epsBase*peBase, pBull=epsBull*peBull;
+    const ceiling=pBase*(1+tolerance/100);
+    const pass = pBase>0 && price<=ceiling;
+    const res=document.getElementById('res3'); res.innerHTML='';
+    resultCard(res,'悲觀情境股價',fmt(pBear,0),'EPS×PE', price<=pBear);
+    resultCard(res,'中性情境股價',fmt(pBase,0),'EPS×PE', price<=pBase);
+    resultCard(res,'樂觀情境股價',fmt(pBull,0),'EPS×PE', price<=pBull);
+    resultCard(res,'目前股價',fmt(price,0),'容忍上限 '+fmt(ceiling,0), pass);
+    setPill(3,pass);
+    document.getElementById('line3').textContent = pass? '現價未超過容忍範圍。' : '現價已超出中性情境太多。';
+    state[3]=pass; updateVerdict();
+  }
+  function gate4(){
+    const H=val('g4-h'), L=val('g4-l'), C=val('g4-c');
+    const CDP=(H+L+2*C)/4, AH=CDP+(H-L), NH=2*CDP-L, NL=2*CDP-H, AL=CDP-(H-L);
+    document.getElementById('cdp-CDP').textContent=fmt(CDP,2);
+    document.getElementById('cdp-AH').textContent=fmt(AH,2);
+    document.getElementById('cdp-NH').textContent=fmt(NH,2);
+    document.getElementById('cdp-NL').textContent=fmt(NL,2);
+    document.getElementById('cdp-AL').textContent=fmt(AL,2);
+    if(!val('g4-entry') && C) setVal2('g4-entry', CDP);
+    if(!val('g4-stop') && C) setVal2('g4-stop', NL);
+    if(!val('g4-target') && C) setVal2('g4-target', AH);
+    function setVal2(id,v){ document.getElementById(id).value = Math.round(v*100)/100; }
+
+    const capital=val('g4-capital'), riskPct=val('g4-riskpct'), capLimitPct=val('g4-caplimit');
+    const entry=val('g4-entry'), stop=val('g4-stop'), target=val('g4-target');
+    const perShareRisk=Math.abs(entry-stop);
+    const maxLoss = capital*riskPct/100;
+    const sharesByRisk = perShareRisk>0 ? Math.floor(maxLoss/perShareRisk) : 0;
+    const capLimitAmt = capital*capLimitPct/100;
+    const sharesByCap = entry>0 ? Math.floor(capLimitAmt/entry) : 0;
+    const finalShares = Math.min(sharesByRisk, sharesByCap);
+    const rr = perShareRisk>0 ? (target-entry)/(entry-stop) : 0;
+    const res=document.getElementById('res4'); res.innerHTML='';
+    resultCard(res,'單筆最大虧損',fmt(maxLoss,0)+' 元','風險股數 '+sharesByRisk+' 股','1');
+    resultCard(res,'資金上限可買股數',sharesByCap+' 股','','1');
+    resultCard(res,'建議買進股數',finalShares+' 股','','1');
+    resultCard(res,'風險報酬比',fmt(rr,2),'建議 ≥ 1.5', rr>=1.5);
+    setPill(4, rr>=1.5);
+    document.getElementById('line4').textContent = rr>=1.5? '風險報酬比合格。':'風險報酬比偏低，重新檢視進出場點。';
+    state[4]= rr>=1.5; updateVerdict();
+  }
+
+  window.updateVerdict = function(){
+    const v=document.getElementById('verdict');
+    const items = document.querySelectorAll('#checklist .item');
+    [1,2,3,4].forEach((n,i)=> items[i].setAttribute('data-ok', state[n]?'1':'0'));
+    const allChecked = [1,2,3,4].every(n=>state[n]!==null);
+    const allPass = [1,2,3,4].every(n=>state[n]===true);
+    const anyFail = [1,2,3,4].some(n=>state[n]===false);
+    let s='no', badge='✕', head='不建議進場', sub='至少一關未通過。';
+    if(!allChecked){ s='watch'; badge='⏳'; head='尚未完成全部四關'; sub='按每一關的「檢查這一關」。'; }
+    else if(allPass){ s='go'; badge='✓'; head='四關皆通過，可考慮進場'; sub='仍須依個人風險承受能力決定實際部位。'; }
+    v.setAttribute('data-state', s);
+    document.getElementById('verdict-badge').textContent=badge;
+    document.getElementById('verdict-headline').textContent=head;
+    document.getElementById('verdict-sub').textContent=sub;
+  };
+})();
+</script>
+</body>
+</html>
