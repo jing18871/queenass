@@ -205,6 +205,33 @@
     </div>
   </section>
 
+  <!-- EPS x PE 漲跌幅拆解工具（輔助判讀，不計入四關評分） -->
+  <section class="gate" id="epsPeTool">
+    <div class="gate-head">
+      <div class="gate-no">＋</div>
+      <div class="gate-title-wrap">
+        <div class="gate-title">附加工具 — EPS×PE 漲跌幅拆解</div>
+        <div class="gate-desc">股價 ≈ EPS × 本益比。這段漲跌幅有多少是「獲利真的變好/變差」，多少是「市場給的本益比變貴/變便宜」——純輔助判讀，不計入四關評分。</div>
+      </div>
+    </div>
+    <div class="gate-body">
+      <div class="formula"><b>總漲跌幅</b> = 獲利貢獻（固定舊本益比，看EPS變動） + 估值貢獻（固定新EPS，看本益比變動）</div>
+      <div class="field-grid">
+        <div class="field"><label>比較基準日期</label><input id="pe-tool-date" type="date"><span class="hint">選一個過去日期，按下方按鈕自動抓該時間點附近的真實EPS與本益比</span></div>
+        <div class="field"><label></label><button type="button" class="check" style="width:100%;" onclick="fetchHistoricalPeBaseline()">📥 抓歷史基準值</button><span class="hint" id="hint-pe-tool-fetch"></span></div>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>舊EPS（近四季，基準日當時）</label><input id="pe-tool-eps-old" type="number" step="0.01"><span class="hint" id="hint-pe-tool-eps-old"></span></div>
+        <div class="field"><label>舊本益比（基準日當時）</label><input id="pe-tool-pe-old" type="number" step="0.01"><span class="hint" id="hint-pe-tool-pe-old"></span></div>
+        <div class="field"><label>新EPS（近四季，目前）</label><input id="pe-tool-eps-new" type="number" step="0.01"><span class="hint" id="hint-pe-tool-eps-new"></span></div>
+        <div class="field"><label>新本益比（目前）</label><input id="pe-tool-pe-new" type="number" step="0.01"><span class="hint" id="hint-pe-tool-pe-new"></span></div>
+      </div>
+      <div class="result-grid" id="res-pe-tool"></div>
+      <div class="flag" id="pe-tool-conclusion" style="border-color:var(--line); background:var(--paper-2); color:var(--text);" hidden></div>
+      <div class="btn-row" style="justify-content:flex-end;"><button class="check" onclick="computePeDecomposition()">計算拆解</button></div>
+    </div>
+  </section>
+
   <!-- GATE 3 -->
   <section class="gate" id="gate3">
     <div class="gate-head">
@@ -343,6 +370,60 @@ async function fetchLatestTwsePrice(stockNo){
   return null;
 }
 
+async function fetchTwsePriceOnOrBefore(stockNo, targetDateISO){
+  // 從目標月份往前最多查12個月，找出「小於等於目標日期」的最後一筆收盤價
+  const target = new Date(targetDateISO+'T00:00:00');
+  for(let back=0; back<=12; back++){
+    const d = new Date(target); d.setMonth(d.getMonth()-back);
+    const ym = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+'01';
+    const url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date='+ym+'&stockNo='+stockNo;
+    try{
+      const j = await fetchJSON(url);
+      if(j && j.data && j.data.length){
+        const rows = j.data.map(r=>({dateISO: rocDateToISO(r[0]), close: parseFloat(r[6])}));
+        const eligible = back===0 ? rows.filter(r=>r.dateISO<=targetDateISO) : rows;
+        if(eligible.length) return eligible[eligible.length-1];
+      }
+    }catch(e){ /* 往前一個月再試 */ }
+  }
+  return null;
+}
+
+function ttmEpsAsOf(epsRows, targetDateISO){
+  // epsRows 需已依日期新到舊排序；取「財報日 <= 目標日期」的最近四季加總
+  if(!epsRows) return null;
+  const eligible = epsRows.filter(r=>r.date<=targetDateISO);
+  if(eligible.length<4) return null;
+  return {
+    ttm: eligible.slice(0,4).reduce((s,r)=>s+r.value,0),
+    fromDate: eligible[3].date, toDate: eligible[0].date
+  };
+}
+
+async function fetchHistoricalPeBaseline(){
+  const dateEl = document.getElementById('pe-tool-date');
+  const hint = document.getElementById('hint-pe-tool-fetch');
+  if(!dateEl.value){ hint.textContent='⚠️請先選一個比較基準日期'; return; }
+  if(!currentStockMeta.id){ hint.textContent='⚠️請先在上面查詢一檔股票，再回來抓歷史基準值'; return; }
+  hint.textContent='查詢中…';
+  try{
+    const [priceResult, epsResult] = await Promise.all([
+      fetchTwsePriceOnOrBefore(currentStockMeta.id, dateEl.value),
+      Promise.resolve(ttmEpsAsOf(lastEpsRows, dateEl.value))
+    ]);
+    if(!priceResult){ hint.textContent='⚠️查無該日期附近的證交所股價資料'; return; }
+    if(!epsResult || !epsResult.ttm){
+      hint.textContent='⚠️查無該日期當時的近四季EPS資料（可能財報年度不夠久），股價已查到但本益比無法算，請自行填寫EPS';
+      return;
+    }
+    document.getElementById('pe-tool-eps-old').value = Math.round(epsResult.ttm*100)/100;
+    document.getElementById('pe-tool-pe-old').value = Math.round((priceResult.close / epsResult.ttm)*100)/100;
+    hint.textContent = '已帶入：'+priceResult.dateISO+' 收盤 '+priceResult.close+' 元，近四季EPS('+epsResult.fromDate+'~'+epsResult.toDate+')';
+  }catch(e){
+    hint.textContent = '查詢失敗：'+e.message;
+  }
+}
+
 function latestTwoByType(rows, type){
   const filtered = rows.filter(r=>r.type===type).sort((a,b)=> a.date<b.date?1:-1);
   return filtered.slice(0,2); // [latest, prev]
@@ -356,6 +437,7 @@ let stockInfoCache = null;
 let bwibbuCache = null; // 證交所官方「個股日本益比」全市場清單，key=代號
 let industryPeResult = null; // {industry, median, n}
 let currentStockMeta = {id:null, name:null}; // 查詢按鈕用的目前股票代號/名稱
+let lastEpsRows = null; // 快取最近一次查詢的季EPS資料，供EPS×PE拆解工具抓歷史基準值用
 
 function openEpsSearch(){
   if(!currentStockMeta.id){ window.open('https://www.google.com/search?q=' + encodeURIComponent('台股 預估EPS 法人'), '_blank'); return; }
@@ -465,6 +547,7 @@ async function runAutoFetch(){
       gotAny = true;
       const rows = fs.data;
       const epsRows = rows.filter(r=>r.type==='EPS').sort((a,b)=> a.date<b.date?1:-1);
+      lastEpsRows = epsRows;
       const revRows = rows.filter(r=>r.type==='Revenue');
       const gpRows = rows.filter(r=>r.type==='GrossProfit');
       const niRows = rows.filter(r=>r.type==='IncomeAfterTaxes').sort((a,b)=> a.date<b.date?1:-1);
@@ -474,6 +557,19 @@ async function runAutoFetch(){
       if(epsRows.length>=4){
         const ttm = epsRows.slice(0,4).reduce((s,r)=>s+r.value,0);
         setVal('g2-eps-ttm', ttm); setHint('g2-eps-ttm','FinMind 近四季('+epsRows[3].date+'~'+epsRows[0].date+')加總');
+
+        // EPS×PE拆解工具：新EPS/新本益比自動帶入目前真實數字（只在使用者沒填時才帶）
+        const peToolEpsNewEl = document.getElementById('pe-tool-eps-new');
+        if(peToolEpsNewEl && !peToolEpsNewEl.value){
+          peToolEpsNewEl.value = Math.round(ttm*100)/100;
+          document.getElementById('hint-pe-tool-eps-new').textContent = '自動帶入：近四季實際EPS';
+        }
+        const priceEl = document.getElementById('g2-price');
+        const peToolPeNewEl = document.getElementById('pe-tool-pe-new');
+        if(peToolPeNewEl && !peToolPeNewEl.value && priceEl.value && ttm){
+          peToolPeNewEl.value = Math.round((parseFloat(priceEl.value)/ttm)*100)/100;
+          document.getElementById('hint-pe-tool-pe-new').textContent = '自動帶入：目前股價 ÷ 近四季EPS';
+        }
         // 去年全年 = 找最新一筆的年份-1，該年Q1~Q4加總（若齊全）
         const latestYear = parseInt(epsRows[0].date.slice(0,4),10);
         const lastYearRows = epsRows.filter(r=> parseInt(r.date.slice(0,4),10)===latestYear-1);
@@ -708,6 +804,58 @@ document.getElementById('searchTicker').addEventListener('keydown', e=>{ if(e.ke
     document.getElementById('line4').textContent = rr>=1.5? '風險報酬比合格。':'風險報酬比偏低，重新檢視進出場點。';
     state[4]= rr>=1.5; updateVerdict();
   }
+
+  window.computePeDecomposition = function(){
+    const epsOld=val('pe-tool-eps-old'), peOld=val('pe-tool-pe-old');
+    const epsNew=val('pe-tool-eps-new'), peNew=val('pe-tool-pe-new');
+    const res=document.getElementById('res-pe-tool'); res.innerHTML='';
+    const concl=document.getElementById('pe-tool-conclusion');
+    if(!epsOld || !peOld || !epsNew || !peNew){
+      concl.hidden=false; concl.style.borderColor='var(--warn-line)'; concl.style.background='var(--warn-bg)'; concl.style.color='var(--warn)';
+      concl.innerHTML='⚠️ <span>請先把「舊EPS、舊本益比、新EPS、新本益比」四個欄位都填好（可以按上面「抓歷史基準值」自動帶入，或自己手動輸入）。</span>';
+      return;
+    }
+    const priceOld = epsOld*peOld, priceNew = epsNew*peNew;
+    const totalChangePct = priceOld!==0 ? (priceNew-priceOld)/priceOld*100 : 0;
+    // 固定舊PE，看EPS變動貢獻；固定新EPS，看PE變動貢獻（與講義範例算法一致）
+    const epsContribAmt = peOld*(epsNew-epsOld);
+    const peContribAmt = epsNew*(peNew-peOld);
+    const epsContribPct = priceOld!==0 ? epsContribAmt/priceOld*100 : 0;
+    const peContribPct = priceOld!==0 ? peContribAmt/priceOld*100 : 0;
+    resultCard(res,'舊股價（EPS×PE）',fmt(priceOld,1),'舊EPS '+fmt(epsOld,2)+' × 舊PE '+fmt(peOld,1)+'倍','1');
+    resultCard(res,'新股價（EPS×PE）',fmt(priceNew,1),'新EPS '+fmt(epsNew,2)+' × 新PE '+fmt(peNew,1)+'倍','1');
+    resultCard(res,'總漲跌幅',(totalChangePct>=0?'+':'')+fmt(totalChangePct,1)+'%','新股價 vs 舊股價','1');
+    resultCard(res,'獲利貢獻',(epsContribPct>=0?'+':'')+fmt(epsContribPct,1)+'%','固定舊PE，只看EPS變動','1');
+    resultCard(res,'估值貢獻',(peContribPct>=0?'+':'')+fmt(peContribPct,1)+'%','固定新EPS，只看PE變動','1');
+
+    // 結論分類：比照講義「獲利驅動／估值驅動／雙重驅動／資金與敘事驅動」
+    const sign3 = pct => pct > 0.5 ? 1 : (pct < -0.5 ? -1 : 0);
+    const e = sign3(epsContribPct), p = sign3(peContribPct);
+    let label, desc, state='watch';
+    if(e===0 && p===0){
+      label='變化不大'; desc='EPS與本益比都沒有明顯變動，股價也沒有明顯漲跌。'; state='watch';
+    } else if(e===1 && p===0){
+      label='獲利驅動'; desc='上漲主要來自獲利真的變好，本益比沒有跟著膨脹，相對健康。'; state='go';
+    } else if(e===1 && p===1){
+      label='獲利＋估值雙重驅動'; desc='獲利上修、市場也願意給更高本益比，兩者同時往上；若估值貢獻遠大於獲利貢獻，代表後面漲幅愈來愈依賴「市場信心」而非「真的賺更多」，加碼前最好用情境關（Gate 3）悲觀情境再測一次安全邊際。'; state=(Math.abs(peContribPct) > Math.abs(epsContribPct)*1.5) ? 'watch' : 'go';
+    } else if(e===1 && p===-1){
+      label='獲利成長但估值收縮'; desc='公司真的賺更多，但市場反而給更低本益比（可能是產業降評或利率上升），股價表現會比獲利成長幅度更弱。'; state='watch';
+    } else if(e===-1 && p===0){
+      label='獲利衰退驅動'; desc='下跌主要來自獲利真的變差，不是單純估值修正，要留意基本面是否持續惡化。'; state='no';
+    } else if(e===-1 && p===1){
+      label='估值逆勢擴張'; desc='獲利在衰退，但本益比反而上升撐住股價——這段漲幅對應的獲利基礎在變差，要特別小心，常是題材或資金行情。'; state='no';
+    } else if(e===-1 && p===-1){
+      label='獲利＋估值雙重轉弱'; desc='獲利下修、本益比也被壓縮，兩個方向一起往下，是風險最高的組合之一，通常對應基本面反轉。'; state='no';
+    } else if(e===0 && p===1){
+      label='純估值擴張（資金/敘事驅動）'; desc='EPS沒有明顯上修，股價上漲主要是市場願意給更高本益比，過熱風險較高，需要獲利盡快跟上，否則容易回落。'; state='no';
+    } else { // e===0 && p===-1
+      label='純估值收縮'; desc='獲利沒有明顯變化，但市場給的本益比變低了，通常反映利率上升、產業降評或市場風險偏好下降。'; state='watch';
+    }
+    concl.hidden=false;
+    const colorVar = state==='go' ? 'good' : (state==='no' ? 'bad' : 'warn');
+    concl.style.borderColor='var(--'+colorVar+'-line)'; concl.style.background='var(--'+colorVar+'-bg)'; concl.style.color='var(--'+colorVar+')';
+    concl.innerHTML='<b>判讀：'+label+'</b><br><span>'+desc+'</span>';
+  };
 
   window.updateVerdict = function(){
     const v=document.getElementById('verdict');
