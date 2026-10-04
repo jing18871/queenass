@@ -186,7 +186,7 @@
       <div class="gate-no">2</div>
       <div class="gate-title-wrap">
         <div class="gate-title">估值關 — 用「未來」算 PEG，不是用「過去」</div>
-        <div class="gate-desc">未來預估EPS查無公開共識API，此欄位需要你自己填（法人報告、公司財測或你自己的估算）。</div>
+        <div class="gate-desc">未來預估EPS查無可免費程式化查詢的共識API（Google AI Overview那類數字來自FactSet等付費機構資料，沒有對外開放的免費介面），此欄位仍需要你自己填——下面有歷史EPS趨勢當參考，加上一鍵查詢連結幫你省查找時間。</div>
       </div>
       <div class="status-pill" id="pill2">待檢查</div>
     </div>
@@ -196,8 +196,9 @@
         <div class="field"><label>目前股價</label><input id="g2-price" type="number" step="0.01"><span class="hint" id="hint-g2-price"></span></div>
         <div class="field"><label>近四季 EPS 總和</label><input id="g2-eps-ttm" type="number" step="0.01"><span class="hint" id="hint-g2-eps-ttm"></span></div>
         <div class="field"><label>去年全年 EPS</label><input id="g2-eps-last" type="number" step="0.01"><span class="hint" id="hint-g2-eps-last"></span></div>
-        <div class="field"><label>未來一年預估 EPS</label><input id="g2-eps-fwd" type="number" step="0.01"><span class="hint">⚠️查無共識API，請自行填入法人預估或你的估算</span></div>
+        <div class="field"><label>未來一年預估 EPS</label><input id="g2-eps-fwd" type="number" step="0.01"><span class="hint">⚠️查無免費共識API，請自行填入法人預估或你的估算　<a href="#" onclick="openEpsSearch();return false;" style="color:var(--accent);text-decoration:underline;">🔍一鍵查詢法人預估EPS</a></span></div>
       </div>
+      <div class="flag" id="epsTrendNote" style="border-color:var(--line); background:var(--paper-2); color:var(--text-soft);" hidden></div>
       <div class="result-grid" id="res2"></div>
       <div class="flag" id="flag2" hidden>⚠️ <span><b>價值陷阱警訊：</b>用「去年成長率」算出來的 PEG 看起來便宜，但用「明年預估成長率」算卻偏貴，代表成長動能放緩，最終判斷以未來 PEG 為準。</span></div>
       <div class="btn-row" style="justify-content:space-between;"><button class="check" onclick="computeGate(2)">檢查這一關</button><span class="verdict-line" id="line2"></span></div>
@@ -210,7 +211,7 @@
       <div class="gate-no">3</div>
       <div class="gate-title-wrap">
         <div class="gate-title">情境關 — 悲觀／中性／樂觀，現價落在哪裡</div>
-        <div class="gate-desc">三種情境EPS自己設定；本益比不用憑感覺猜——下面會用「同產業其他上市公司目前本益比」的中位數自動帶入，載板/AI類股本益比正常就是偏高，零售/傳產正常就是偏低，不用同一套標準套所有產業。</div>
+        <div class="gate-desc">本益比不用憑感覺猜——下面會用「同產業其他上市公司目前本益比」的中位數自動帶入，載板/AI類股本益比正常就是偏高，零售/傳產正常就是偏低，不用同一套標準套所有產業。中性EPS預設帶入近四季實際EPS（視為「零成長」假設，不是預測），悲觀/樂觀EPS仍需你自己依法人預估或判斷調整——<a href="#" onclick="openEpsSearch();return false;" style="color:var(--accent);text-decoration:underline;">🔍一鍵查詢法人預估EPS</a>。</div>
       </div>
       <div class="status-pill" id="pill3">待檢查</div>
     </div>
@@ -354,6 +355,13 @@ function valueAt(rows, type, date){
 let stockInfoCache = null;
 let bwibbuCache = null; // 證交所官方「個股日本益比」全市場清單，key=代號
 let industryPeResult = null; // {industry, median, n}
+let currentStockMeta = {id:null, name:null}; // 查詢按鈕用的目前股票代號/名稱
+
+function openEpsSearch(){
+  if(!currentStockMeta.id){ window.open('https://www.google.com/search?q=' + encodeURIComponent('台股 預估EPS 法人'), '_blank'); return; }
+  const q = encodeURIComponent((currentStockMeta.name||'') + ' ' + currentStockMeta.id + ' 預估EPS 法人 FactSet');
+  window.open('https://www.google.com/search?q='+q, '_blank');
+}
 
 async function ensureStockInfoCache(){
   if(!stockInfoCache){
@@ -420,6 +428,11 @@ async function runAutoFetch(){
     if(!resolved){ setStatus('查無「'+raw+'」這檔股票，請確認名稱或改輸入代號（例如 2330）', 'err'); btn.disabled=false; return; }
     stockNo = resolved.id;
     if(resolved.name) setStatus('比對到「'+resolved.name+'」(代號'+stockNo+')，查詢中…');
+    let stockName = resolved.name;
+    if(!stockName){
+      try{ const info = await ensureStockInfoCache(); const hit = info.find(r=>r.stock_id===stockNo); if(hit) stockName = hit.stock_name; }catch(e){}
+    }
+    currentStockMeta = {id: stockNo, name: stockName || stockNo};
   }catch(e){
     setStatus('股票清單查詢失敗：'+e.message, 'err'); btn.disabled=false; return;
   }
@@ -439,7 +452,7 @@ async function runAutoFetch(){
     }
 
     // 2) FinMind 財報
-    const start = startDateYearsAgo(2);
+    const start = startDateYearsAgo(3);
     const [fs, bs, cf] = await Promise.all([
       fetchJSON(`${FINMIND}?dataset=TaiwanStockFinancialStatements&data_id=${stockNo}&start_date=${start}`).catch(()=>null),
       fetchJSON(`${FINMIND}?dataset=TaiwanStockBalanceSheet&data_id=${stockNo}&start_date=${start}`).catch(()=>null),
@@ -467,6 +480,34 @@ async function runAutoFetch(){
         if(lastYearRows.length===4){
           setVal('g2-eps-last', lastYearRows.reduce((s,r)=>s+r.value,0));
           setHint('g2-eps-last','FinMind '+(latestYear-1)+'年四季加總');
+        }
+
+        // 歷史EPS趨勢（真實數字，僅供參考，不是預測）：抓齊全的過去年度全年EPS，算年增率
+        const years = [...new Set(epsRows.map(r=>parseInt(r.date.slice(0,4),10)))].sort((a,b)=>a-b);
+        const annualEps = [];
+        years.forEach(y=>{
+          const yrRows = epsRows.filter(r=>parseInt(r.date.slice(0,4),10)===y);
+          if(yrRows.length===4) annualEps.push({year:y, eps: yrRows.reduce((s,r)=>s+r.value,0)});
+        });
+        const trendNote = document.getElementById('epsTrendNote');
+        if(annualEps.length>=2){
+          const parts = annualEps.map(a=>a.year+':'+fmtNum(a.eps,2));
+          const growthParts = [];
+          for(let i=1;i<annualEps.length;i++){
+            const prev=annualEps[i-1].eps, cur=annualEps[i].eps;
+            if(prev) growthParts.push(annualEps[i].year+'較'+annualEps[i-1].year+' '+(prev>0?((cur-prev)/Math.abs(prev)*100).toFixed(1)+'%':'(基期為負，略)'));
+          }
+          trendNote.hidden = false;
+          trendNote.innerHTML = 'ℹ️ <span><b>近'+annualEps.length+'年全年EPS（真實數字，純歷史趨勢，不是分析師預測）：</b>'+parts.join('、')+'。年增率：'+(growthParts.join('、')||'—')+'。可當作判斷未來一年預估EPS時的參考基準，實際預估仍建議對照法人報告或你自己的判斷。</span>';
+        } else {
+          trendNote.hidden = true;
+        }
+
+        // 情境關「中性EPS」預設帶入近四季實際EPS（=零成長假設，是真實數字不是猜測），只在使用者沒填時才帶
+        const baseEl = document.getElementById('g3-eps-base');
+        if(baseEl && !baseEl.value){
+          baseEl.value = fmtNum(ttm,2);
+          baseEl.title = '預設＝近四季實際EPS（零成長假設），非分析師預測，請依你的判斷調整';
         }
       }
 
@@ -549,7 +590,7 @@ async function runAutoFetch(){
 
     document.getElementById('tickerName').value = stockNo;
     if(gotAny){
-      setStatus('查詢完成：綠色框為自動帶入的真實數字，沒上色的欄位（未來EPS、情境本益比）請自行判斷填入。', 'ok');
+      setStatus('查詢完成：綠色框為自動帶入的真實數字；情境關中性EPS已預設帶入近四季實際EPS（零成長假設）；未來預估EPS、悲觀/樂觀EPS仍無免費共識API，請自行判斷填入（可用查詢連結快速搜尋）。', 'ok');
     } else {
       setStatus('FinMind 財報查無資料（可能代號錯誤，或該公司資料未收錄），股價仍已嘗試抓取。', 'err');
     }
