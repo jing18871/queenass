@@ -350,12 +350,36 @@ function valueAt(rows, type, date){
   return r ? r.value : null;
 }
 
+let stockInfoCache = null;
+async function resolveStockId(raw){
+  // 純數字代號直接用；輸入公司名稱時，查FinMind股票清單比對名稱
+  const digits = raw.replace(/\D/g,'');
+  if(digits && digits===raw) return {id: digits, name: null};
+  if(!stockInfoCache){
+    const j = await fetchJSON(`${FINMIND}?dataset=TaiwanStockInfo`);
+    stockInfoCache = (j && j.data) ? j.data : [];
+  }
+  const needle = raw.trim();
+  let hit = stockInfoCache.find(r=>r.stock_name===needle);
+  if(!hit) hit = stockInfoCache.find(r=>r.stock_name && r.stock_name.includes(needle));
+  if(!hit) return null;
+  return {id: hit.stock_id, name: hit.stock_name};
+}
+
 async function runAutoFetch(){
   const raw = document.getElementById('searchTicker').value.trim();
   if(!raw){ setStatus('請輸入股票代號', 'err'); return; }
-  const stockNo = raw.replace(/\D/g,'') || raw;
   const btn = document.getElementById('searchBtn'); btn.disabled = true;
   setStatus('查詢中…');
+  let stockNo;
+  try{
+    const resolved = await resolveStockId(raw);
+    if(!resolved){ setStatus('查無「'+raw+'」這檔股票，請確認名稱或改輸入代號（例如 2330）', 'err'); btn.disabled=false; return; }
+    stockNo = resolved.id;
+    if(resolved.name) setStatus('比對到「'+resolved.name+'」(代號'+stockNo+')，查詢中…');
+  }catch(e){
+    setStatus('股票清單查詢失敗：'+e.message, 'err'); btn.disabled=false; return;
+  }
 
   try{
     // 1) 官方股價 (TWSE OpenAPI)
