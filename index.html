@@ -121,6 +121,16 @@
 
   .disclaimer{font-size:11.5px; color:var(--text-soft); line-height:1.8; border-top:1px solid var(--line); padding-top:14px;}
   .footnote{font-size:11px; color:var(--lock); text-align:center; padding-top:6px;}
+  .profile-card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:18px 20px; display:flex; flex-direction:column; gap:12px;}
+  .profile-card h2{font-size:18px; margin:0;}
+  .profile-card .pc-meta{font-size:13px; color:var(--text-soft); display:flex; flex-wrap:wrap; gap:6px 14px;}
+  .profile-card .pc-meta b{color:var(--text);}
+  .profile-card .pc-rows{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px;}
+  .profile-card .pc-row{background:var(--paper-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.7;}
+  .profile-card .pc-row .k{font-size:11.5px; font-weight:700; color:var(--accent-deep); letter-spacing:.04em; margin-bottom:2px;}
+  .profile-card .pc-links{display:flex; flex-wrap:wrap; gap:8px; font-size:13px;}
+  .profile-card .pc-links a{color:var(--accent-deep); border:1px solid var(--line); border-radius:8px; padding:4px 10px; text-decoration:none; background:var(--paper-2);}
+  .profile-card .pc-note{font-size:11.5px; color:var(--text-soft); line-height:1.7;}
   [hidden]{display:none !important;}
 </style>
 </head>
@@ -145,6 +155,15 @@
     <span class="sep">·</span>最新收盤日
     <input id="dataDate" value="" placeholder="尚未查詢" aria-label="資料日期">
   </div>
+
+  <!-- 公司與產業介紹卡 -->
+  <section class="profile-card" id="profileCard" hidden>
+    <h2 id="pc-title"></h2>
+    <div class="pc-meta" id="pc-meta"></div>
+    <div class="pc-rows" id="pc-rows"></div>
+    <div class="pc-links" id="pc-links"></div>
+    <div class="pc-note" id="pc-note"></div>
+  </section>
 
   <nav class="rail" id="rail">
     <div class="step" data-state="idle" id="step-1"><div class="bar"></div><div class="lbl">① 品質</div></div>
@@ -483,8 +502,116 @@ async function fetchIndustryPE(stockNo){
     const pes = [...new Set(peers)].map(id=>bwibbu[id]).filter(v=>v!==undefined && v>0 && v<150);
     const med = median(pes);
     if(med===null) return null;
-    return {industry: self.industry_category, median: med, n: pes.length};
+    const selfPe = bwibbu[stockNo];
+    let pctBelow = null;
+    if(selfPe!==undefined && selfPe>0 && selfPe<150 && pes.length>=3){
+      pctBelow = pes.filter(v=>v<selfPe).length/pes.length; // 比這檔便宜的同業占比
+    }
+    return {industry: self.industry_category, median: med, n: pes.length, selfPe: (selfPe!==undefined && selfPe>0)? selfPe : null, pctBelow, totalPeers:[...new Set(peers)].length};
   }catch(e){ return null; }
+}
+
+// ===== 公司與產業介紹卡 =====
+// 產業介紹為 Claude 內建的一般背景說明（非即時資料、非投資建議）；基本資料來自 FinMind；同業本益比來自證交所
+const INDUSTRY_INFO = {
+ '半導體業':['設計、製造、封裝測試晶片，是電子產品與AI運算的核心零件。','看全球終端需求（手機、PC、AI伺服器）、庫存循環、稼動率、先進製程/封裝的資本支出。','景氣循環明顯：庫存調整時獲利快速下滑，高峰期本益比常被市場拉高；留意單一客戶集中與地緣風險。'],
+ '電子零組件業':['生產被動元件、PCB/載板、連接器、散熱等電子產品零件。','看下游客戶（手機、伺服器、車用）拉貨動能、產品結構（高階占比）、原物料價格。','報價與庫存循環影響大；高階產品帶動毛利，但客戶集中與價格競爭是常見風險。'],
+ '光電業':['面板、LED、光學鏡頭、太陽能等與光有關的產品。','看面板報價、終端需求、產能利用率、技術世代轉換。','產業供給過剩時獲利波動大，常出現虧損與高本益比並存，宜搭配淨值與現金流判斷。'],
+ '電腦及週邊設備業':['品牌電腦、伺服器、代工組裝、工業電腦與週邊設備。','看AI伺服器出貨、雲端業者資本支出、PC換機週期、代工毛利率。','代工毛利率偏低，營收成長不一定等於獲利成長；注意庫存與匯率影響。'],
+ '通信網路業':['網通設備、電信服務、通訊零組件。','看電信資本支出、網通設備庫存、衛星/低軌與企業網路需求。','電信業現金流穩定、成長有限，重股息；設備商則看訂單循環。'],
+ '電子通路業':['電子零組件代理與經銷，位於原廠與客戶之間。','看原廠供貨、客戶拉貨與庫存水位、營收規模與週轉。','毛利率低、靠規模，庫存跌價與資金成本是主要風險。'],
+ '資訊服務業':['軟體、系統整合、資安與雲端服務。','看企業與政府數位化預算、專案認列時點、經常性收入占比。','專案制公司營收波動大；經常性收入越高通常估值越穩。'],
+ '其他電子業':['不屬於前述分類的電子相關公司，例如代工服務、EMS、精密元件。','看主要客戶產品週期、產能與毛利率。','分類較雜，建議對照公司實際主力產品，同業比較時要小心不是同一種生意。'],
+ '電子工業':['電子相關各類公司的整體分類。','看終端需求、庫存週期與技術世代。','不同次產業差異大，需對照主力產品。'],
+ '數位雲端':['雲端、電商平台、數位服務相關公司。','看用戶數、營收成長率、獲利轉正進度。','成長型公司常用營收/用戶估值，本益比參考性較低。'],
+ '生技醫療業':['新藥研發、醫材、醫療服務、檢測。','看研發進度（臨床試驗階段）、授權金、產品上市與認證時程。','新藥公司多無獲利，估值靠題材，事件風險高；醫材/醫療服務則看穩定營收。'],
+ '化學生技醫療':['化學品與生技醫療的綜合分類。','看原料價格、產品結構與研發進度。','不同事業差異大，需對照主力產品。'],
+ '化學工業':['石化原料、特用化學品、塗料、溶劑等。','看油價與原料報價、產品價差、下游需求與產能利用率。','價差循環明顯，景氣高峰時獲利好看但本益比反而偏低，需小心高點。'],
+ '塑膠工業':['塑膠原料與製品。','看石化原料價格、中國與全球供需、產能擴張。','獲利隨價差波動，常在景氣谷底時本益比偏高。'],
+ '橡膠工業':['輪胎與橡膠製品。','看天然/合成橡膠成本、汽車替換需求、匯率。','原料成本與匯率影響毛利，需求相對穩定。'],
+ '紡織纖維':['化纖、布料、成衣、鞋材代工。','看品牌客戶訂單、原料價格、匯率與產能布局。','客戶集中度高，景氣與庫存調整會明顯影響訂單。'],
+ '鋼鐵工業':['煉鋼、鋼品加工與金屬製品。','看鋼價與鐵礦/廢鋼成本、建築與製造需求、進口與貿易政策。','典型景氣循環股，淨值比常比本益比更有參考性。'],
+ '電機機械':['工具機、重電、自動化設備與機械零件。','看製造業資本支出、電網與能源建設、訂單能見度。','訂單轉營收有時間差；重電受政策與電網投資帶動。'],
+ '電器電纜':['電線電纜、家電與電力相關設備。','看銅價、基礎建設與房市需求。','原料成本變動影響毛利，常靠庫存評價損益。'],
+ '汽車工業':['整車、零組件、售後市場與電動車供應鏈。','看新車銷量、車款週期、電動車滲透率、零件出口。','整車廠看銷量與車款；零組件看客戶與車種組合。'],
+ '建材營造':['建設開發、營造工程與建材。','看房市銷售與推案、完工交屋認列時點、利率、土地成本。','獲利依交屋認列，波動大；高負債屬產業特性，需看現金流與在建工程。'],
+ '水泥工業':['水泥、預拌混凝土與相關建材。','看基礎建設與營建需求、煤炭與能源成本、區域供需。','成本與電價影響毛利，股息通常是重點。'],
+ '玻璃陶瓷':['玻璃、陶瓷與相關材料製品。','看原料與能源成本、營建與工業需求。','能源成本是主要變數，景氣循環明顯。'],
+ '造紙工業':['紙漿、紙品與包裝材料。','看紙漿價格、需求與庫存、能源成本。','價格週期與原料成本影響大。'],
+ '食品工業':['食品、飲料、農產加工。','看原料價格、通路與品牌力、消費力。','需求穩定、成長有限；成本轉嫁能力是關鍵。'],
+ '農業科技業':['農業、畜牧、水產與相關加工科技。','看天候、原料與價格週期。','易受天氣與疫病影響，獲利波動。'],
+ '航運業':['貨櫃、散裝與油輪等海運服務。','看運價指數（SCFI、BDI）、運力供給、運河與貿易路線變化。','極端循環股：獲利高峰時本益比很低、谷底時反而很高，不適合用單一本益比判斷。'],
+ '貿易百貨':['百貨零售、貿易、電商與通路。','看同店銷售、通路擴張、消費景氣。','毛利率與店效是重點，需求隨消費力變動。'],
+ '觀光餐旅':['旅館、餐飲、旅行社、休閒。','看旅客人次、住房/客單價、旺季效應。','受疫情、景氣與旅遊政策影響大。'],
+ '油電燃氣業':['天然氣、石油與電力等公用事業。','看燃料成本、公用事業費率調整與政府政策。','受管制，獲利穩定但成長有限，重股息。'],
+ '金融保險':['銀行、壽險、產險、證券與金控。','看利差、手續費收入、投資績效、資產品質與資本適足率。','評價常用股價淨值比（PBR）與ROE，本站以OCF/EBITDA為基礎的部分關卡不太適用，請以此為前提判讀。'],
+ '綠能環保':['太陽能、風電、儲能、環保處理。','看政策補貼與標案、電價、設備與原料成本。','政策導向強，專案認列波動大。'],
+ '居家生活':['家具、家飾、日常生活用品。','看通路與品牌、原料成本、消費力。','成長多來自通路擴張與品牌力。'],
+ '運動休閒':['運動用品、自行車、健身與休閒。','看品牌客戶庫存、消費力、訂單。','易受品牌客戶庫存調整影響。'],
+ '文化創意業':['影視、遊戲、設計與內容創作。','看作品或專案時程、授權收入。','獲利依作品而定，波動大。'],
+ '電子商務業':['網路購物與平台服務。','看交易額、用戶與毛利率、物流成本。','成長性高但獲利穩定度因公司而異。'],
+ '其他':['未歸類到上述產業的公司，可能是多角化或特殊業務。','看主力產品與獲利來源，建議自行查公司簡介。','分類太廣，同業比較參考性有限。']
+};
+const INDUSTRY_ALIAS = {'其他電子類':'其他電子業','觀光事業':'觀光餐旅','金融業':'金融保險','數位雲端類':'數位雲端','綠能環保類':'綠能環保','居家生活類':'居家生活','運動休閒類':'運動休閒','電子商務':'電子商務業'};
+function getIndustryInfo(cat){
+  if(!cat) return null;
+  if(/ETF|ETN|指數|存託憑證|受益證券|受益憑證|大盤/i.test(cat)) return {skip:true};
+  const key = INDUSTRY_ALIAS[cat] || cat;
+  if(INDUSTRY_INFO[key]) return {txt:INDUSTRY_INFO[key]};
+  return {txt:['（本站尚未收錄「'+cat+'」的產業說明）','請參考下方連結查看公司簡介。','—']};
+}
+function escHtml(t){ return String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function renderProfileCard(stockNo, stockName){
+  const card = document.getElementById('profileCard');
+  try{
+    const info = await ensureStockInfoCache();
+    const self = info.find(r=>r.stock_id===stockNo);
+    const cat = self && self.industry_category ? self.industry_category : '';
+    const mkt = self ? (self.type==='twse'?'上市':(self.type==='tpex'?'上櫃':(self.type||''))) : '';
+    document.getElementById('pc-title').textContent = (stockName||stockNo)+'（'+stockNo+'）公司與產業';
+    const meta = [];
+    if(mkt) meta.push('市場：<b>'+escHtml(mkt)+'</b>');
+    if(cat) meta.push('產業分類：<b>'+escHtml(cat)+'</b>');
+    if(self && self.date) meta.push('資料日期：<b>'+escHtml(self.date)+'</b>');
+    document.getElementById('pc-meta').innerHTML = meta.join('') ? meta.map(m=>'<span>'+m+'</span>').join('') : '<span>查無基本資料</span>';
+
+    const rows = [];
+    const ii = getIndustryInfo(cat);
+    if(ii && ii.skip){
+      rows.push(['說明','這類標的（ETF/ETN/指數/存託憑證等）不是一般公司，產業說明與同業本益比不適用，且本站四關（財報型）也不適用，請改看追蹤標的與費用率。']);
+    } else if(ii){
+      rows.push(['產業在做什麼', ii.txt[0]]);
+      rows.push(['景氣與需求看什麼', ii.txt[1]]);
+      rows.push(['估值與風險提醒', ii.txt[2]]);
+    }
+    // 同業定位
+    const r = industryPeResult;
+    if(r && !(ii&&ii.skip)){
+      let t = '同業 '+r.n+' 家有本益比資料（產業共 '+r.totalPeers+' 檔），本益比中位數 <b>'+fmtNum(r.median,1)+'</b> 倍。';
+      if(r.selfPe!==null){
+        t += '本檔目前 <b>'+fmtNum(r.selfPe,1)+'</b> 倍';
+        if(r.pctBelow!==null){
+          if(r.pctBelow>0.75) t += '，位於同業偏高區（比約 '+Math.round(r.pctBelow*100)+'% 的同業貴），需要成長性支撐。';
+          else if(r.pctBelow<0.25) t += '，位於同業偏低區（只比約 '+Math.round(r.pctBelow*100)+'% 的同業貴），要確認是真便宜還是價值陷阱／景氣高峰。';
+          else t += '，位於同業中段。';
+        } else t += '。';
+      } else {
+        t += '本檔沒有可用的本益比（虧損、上櫃或證交所當日未收錄），無法判斷在同業的位置。';
+      }
+      rows.push(['同業定位', t]);
+    } else if(!(ii&&ii.skip)){
+      rows.push(['同業定位','查無同業本益比資料，無法比較。']);
+    }
+    document.getElementById('pc-rows').innerHTML = rows.map(x=>'<div class="pc-row"><div class="k">'+escHtml(x[0])+'</div>'+(x[0]==='同業定位'?x[1]:escHtml(x[1]))+'</div>').join('');
+
+    const nm = stockName||stockNo;
+    document.getElementById('pc-links').innerHTML =
+      '<a href="https://www.cnyes.com/twstock/'+encodeURIComponent(stockNo)+'" target="_blank" rel="noopener">鉅亨網 個股</a>'+
+      '<a href="https://statementdog.com/analysis/'+encodeURIComponent(stockNo)+'" target="_blank" rel="noopener">財報狗 分析</a>'+
+      '<a href="https://www.google.com/search?q='+encodeURIComponent(nm+' '+stockNo+' 主要產品 公司簡介')+'" target="_blank" rel="noopener">Google：公司簡介</a>';
+    document.getElementById('pc-note').textContent = '說明：市場／產業分類來自 FinMind；同業本益比來自證交所（僅上市股票有資料）；「產業在做什麼」等文字為本站內建的一般背景說明，不是即時資料、也不是投資建議，公司實際主力產品請以上方連結為準。';
+    card.hidden = false;
+  }catch(e){ card.hidden = true; }
 }
 
 async function resolveStockId(raw){
@@ -683,6 +810,8 @@ async function runAutoFetch(){
       noteEl.style.borderColor='var(--warn-line)'; noteEl.style.background='var(--warn-bg)'; noteEl.style.color='var(--warn)';
       noteEl.innerHTML = '⚠️ <span>查無同產業本益比可參考（可能證交所當日沒收錄這檔股票，或產業分類查無同類股），情境關的本益比請自行判斷填入。</span>';
     }
+
+    renderProfileCard(stockNo, currentStockMeta.name);
 
     document.getElementById('tickerName').value = stockNo;
     if(gotAny){
