@@ -1,0 +1,1788 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>靜靜小金庫</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Manrope:wght@600;700;800&display=swap');
+
+  :root{
+    --bg:#fff3f7;
+    --surface:#ffffff;
+    --surface-2:#ffe3ee;
+    --border:#ffd0e2;
+    --text:#4a2436;
+    --text-dim:#b0758f;
+    --accent:#ff5d94;
+    --accent-soft:#ffe0ec;
+    --success:#2fb786;
+    --success-soft:#e1f8ef;
+    --danger:#ef5a7a;
+    --danger-soft:#ffe3ea;
+    --warning:#e8964f;
+    --warning-soft:#fdecd8;
+    --navbg:#ffffffee;
+    --shadow:0 2px 4px rgba(255,93,148,.08),0 10px 24px -12px rgba(255,93,148,.28);
+    --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --series-4:#eda100;
+    --series-5:#e87ba4; --series-6:#008300; --series-7:#4a3aa7; --series-8:#e34948;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#271620;
+      --surface:#331d2b;
+      --surface-2:#402435;
+      --border:#4f2b40;
+      --text:#fbe9f1;
+      --text-dim:#d9a8c0;
+      --accent:#ff86b4;
+      --accent-soft:#4a2638;
+      --success:#6fd9ad;
+      --success-soft:#1f3b30;
+      --danger:#ff8fa3;
+      --danger-soft:#4a2630;
+      --warning:#eab06a;
+      --warning-soft:#453322;
+      --navbg:#331d2bee;
+      --shadow:0 2px 4px rgba(0,0,0,.3),0 10px 24px -12px rgba(0,0,0,.55);
+      --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
+      --series-5:#d55181; --series-6:#008300; --series-7:#9085e9; --series-8:#e66767;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#271620;
+    --surface:#331d2b;
+    --surface-2:#402435;
+    --border:#4f2b40;
+    --text:#fbe9f1;
+    --text-dim:#d9a8c0;
+    --accent:#ff86b4;
+    --accent-soft:#4a2638;
+    --success:#6fd9ad;
+    --success-soft:#1f3b30;
+    --danger:#ff8fa3;
+    --danger-soft:#4a2630;
+    --warning:#eab06a;
+    --warning-soft:#453322;
+    --navbg:#331d2bee;
+    --shadow:0 2px 4px rgba(0,0,0,.3),0 10px 24px -12px rgba(0,0,0,.55);
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
+    --series-5:#d55181; --series-6:#008300; --series-7:#9085e9; --series-8:#e66767;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Noto Sans TC","Manrope",sans-serif;
+    padding-inline:16px;
+    padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));
+  }
+  h1,h2,h3{font-family:"Manrope","Noto Sans TC",sans-serif;margin:0;text-wrap:balance;}
+  .num{font-family:"Manrope","Noto Sans TC",sans-serif;font-variant-numeric:tabular-nums;font-weight:700;}
+  button{font-family:inherit;}
+  input,select{font-family:inherit;}
+  ::selection{background:var(--accent-soft);}
+
+  /* ---- top bar ---- */
+  .topbar{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    z-index:20;
+    background:var(--bg);
+    padding-block:14px 8px;
+    display:flex;align-items:baseline;justify-content:space-between;
+    gap:8px;
+  }
+  .topbar h1{font-size:19px;font-weight:800;letter-spacing:.2px;}
+  .topbar .date{font-size:12px;color:var(--text-dim);}
+  .sync-pill{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--text-dim);}
+  .sync-pill.synced{background:var(--success-soft);color:var(--success);}
+  .sync-pill.syncing{background:var(--warning-soft);color:var(--warning);}
+  .sync-pill.unavailable{background:var(--danger-soft);color:var(--danger);}
+
+  main{max-width:640px;margin-inline:auto;padding-bottom:24px;}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){.panel.active{animation:none;}}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:16px;
+    box-shadow:var(--shadow);
+  }
+  .stack{display:flex;flex-direction:column;gap:12px;}
+  .section-title{font-size:13px;font-weight:700;color:var(--text-dim);letter-spacing:.04em;text-transform:uppercase;margin-block:20px 8px;}
+  .section-title:first-child{margin-top:4px;}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+
+  .stat{
+    background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:12px 14px;
+    display:flex;flex-direction:column;gap:4px;
+  }
+  .stat .label{font-size:12px;color:var(--text-dim);}
+  .stat .value{font-size:19px;}
+  .stat .value.income{color:var(--success);}
+  .stat .value.expense{color:var(--danger);}
+
+  /* hero: "這個月花了" + donut, readable at a glance */
+  .hero{
+    background:linear-gradient(160deg,var(--surface) 0%,var(--accent-soft) 100%);
+    text-align:center;padding:20px 16px 18px;margin-bottom:4px;
+  }
+  .hero-label{font-size:15px;font-weight:700;color:var(--text-dim);}
+  .hero-amt{font-size:46px;line-height:1.15;color:var(--accent);margin-top:2px;letter-spacing:-.5px;}
+  .hero-sub{font-size:13px;color:var(--text-dim);margin-top:4px;margin-bottom:14px;}
+  .hero #heroChart{background:var(--surface);border-radius:18px;padding:14px;text-align:left;}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;
+    background:var(--surface-2);color:var(--text-dim);white-space:nowrap;
+  }
+  .pill.accent{background:var(--accent-soft);color:var(--accent);}
+  .pill.success{background:var(--success-soft);color:var(--success);}
+  .pill.danger{background:var(--danger-soft);color:var(--danger);}
+  .pill.warning{background:var(--warning-soft);color:var(--warning);}
+
+  .bar-track{height:9px;border-radius:999px;background:var(--surface-2);overflow:hidden;}
+  .bar-fill{height:100%;border-radius:999px;background:var(--accent);transition:width .3s ease;}
+  .bar-fill.warning{background:var(--warning);}
+  .bar-fill.danger{background:var(--danger);}
+
+  .list-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding-block:10px;border-bottom:1px solid var(--border);
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item .meta{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .list-item .meta .name{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .list-item .meta .sub{font-size:12px;color:var(--text-dim);}
+  .list-item .amt{font-size:15px;white-space:nowrap;}
+
+  .timeline{display:flex;flex-direction:column;}
+  .tl-item{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:10px;padding-block:9px;border-bottom:1px dashed var(--border);}
+  .tl-item:last-child{border-bottom:none;}
+  .tl-date{font-size:12px;color:var(--text-dim);text-align:center;line-height:1.2;}
+  .tl-date b{display:block;font-size:15px;color:var(--text);font-family:"Manrope",sans-serif;}
+  .tl-name{font-size:13.5px;font-weight:600;}
+  .tl-amt{font-size:13.5px;white-space:nowrap;}
+
+  form.inline-form{display:flex;flex-direction:column;gap:10px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:12px;color:var(--text-dim);font-weight:600;}
+  .field input,.field select{
+    border:1px solid var(--border);background:var(--bg);color:var(--text);
+    border-radius:10px;padding:9px 10px;font-size:14.5px;width:100%;
+  }
+  .field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .btn{
+    border:none;border-radius:16px;padding:14px 20px;font-size:15.5px;font-weight:700;
+    cursor:pointer;background:var(--accent);color:#fff;min-height:48px;
+  }
+  .btn:focus-visible{outline:2px solid var(--text);outline-offset:2px;}
+  .btn.secondary{background:var(--surface-2);color:var(--text);}
+  .btn.ghost{background:transparent;color:var(--accent);padding:10px 14px;font-size:14px;min-height:40px;}
+  .btn.danger-btn{background:var(--danger-soft);color:var(--danger);}
+  .btn.block{width:100%;}
+  .btn.small{padding:10px 16px;font-size:13.5px;border-radius:14px;min-height:40px;}
+  .iconbtn{
+    border:none;background:var(--surface-2);color:var(--text-dim);width:40px;height:40px;border-radius:14px;
+    font-size:17px;
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;
+  }
+  .iconbtn:hover{color:var(--danger);}
+
+  .empty{color:var(--text-dim);font-size:13px;text-align:center;padding:18px 0;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:6px;}
+
+  details.editor{border-top:1px solid var(--border);margin-top:12px;padding-top:12px;}
+  details.editor summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--accent);list-style:none;}
+  details.editor summary::-webkit-details-marker{display:none;}
+  details.editor summary::before{content:"＋ ";}
+  details.editor[open] summary::before{content:"－ ";}
+
+  /* segmented category tabs inside a panel */
+  .seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+  .seg::-webkit-scrollbar{display:none;}
+  .seg button{
+    border:1px solid var(--border);background:var(--surface);color:var(--text-dim);
+    border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:700;white-space:nowrap;cursor:pointer;min-height:40px;
+  }
+  .seg button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  th{color:var(--text-dim);font-weight:700;font-size:11.5px;}
+  .table-wrap{overflow-x:auto;}
+  tr.neg .plv{color:var(--danger);}
+  tr.pos .plv{color:var(--success);}
+
+  /* bottom nav */
+  nav.tabbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:var(--navbg);backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+    display:flex;justify-content:space-around;
+  }
+  nav.tabbar button{
+    border:none;background:transparent;color:var(--text-dim);
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:11px;font-weight:700;padding:6px 2px;cursor:pointer;flex:1;min-width:0;min-height:48px;
+  }
+  nav.tabbar button .emoji{font-size:22px;line-height:1;}
+  nav.tabbar button.active{color:var(--accent);}
+
+  a{color:var(--accent);}
+
+  @media (min-width:640px){
+    body{padding-inline:24px;}
+  }
+</style>
+
+<div class="topbar">
+  <h1>🎀 靜靜小金庫</h1>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+    <div class="date" id="todayLabel"></div>
+    <div class="sync-pill local" id="syncLabel">僅存本機</div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ========== 總覽 ========== -->
+  <section class="panel active" id="panel-overview">
+
+    <div class="card hero">
+      <div class="hero-label">🌸 這個月花了</div>
+      <div class="num hero-amt" id="heroSpent">$0</div>
+      <div class="hero-sub" id="heroSub"></div>
+      <div id="heroChart"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;">
+        <div class="section-title" style="margin:0;">💰 帳戶餘額</div>
+        <button class="btn ghost small" data-action="edit-balance">修改</button>
+      </div>
+      <div class="num" style="font-size:30px;" id="balanceDisplay">$0</div>
+      <div class="sub" style="font-size:12px;color:var(--text-dim);margin-top:2px;" id="balanceAsOf"></div>
+    </div>
+
+    <div class="section-title">📊 本月總覽</div>
+    <div class="grid3">
+      <div class="stat"><div class="label">收入</div><div class="value income num" id="ovIncome">$0</div></div>
+      <div class="stat"><div class="label">支出</div><div class="value expense num" id="ovExpense">$0</div></div>
+      <div class="stat"><div class="label">結餘</div><div class="value num" id="ovNet">$0</div></div>
+    </div>
+
+    <div hidden>
+      <div class="card" id="savingsCard"></div>
+    </div>
+
+    <div class="section-title">📅 未來 30 天資金流</div>
+    <div class="card">
+      <div class="timeline" id="timelineList"></div>
+    </div>
+
+    <div class="section-title">💳 信用卡待繳</div>
+    <div class="card stack" id="cardReminders"></div>
+
+  </section>
+
+  <!-- ========== 記帳 ========== -->
+  <section class="panel" id="panel-log">
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">新增一筆</div>
+      <form class="inline-form" id="txForm">
+        <div class="grid2">
+          <div class="field">
+            <label>類型</label>
+            <select id="txType">
+              <option value="expense">支出</option>
+              <option value="income">收入</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>日期</label>
+            <input type="date" id="txDate" required>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>分類</label>
+            <select id="txCategory"></select>
+          </div>
+          <div class="field">
+            <label>金額</label>
+            <input type="number" id="txAmount" min="0" step="1" placeholder="0" required>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>付款方式</label>
+            <select id="txMethod">
+              <option>銀行轉帳</option>
+              <option>現金</option>
+              <option>國泰世華信用卡</option>
+              <option>富邦信用卡</option>
+              <option>永豐信用卡</option>
+              <option>台新信用卡</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>備註（選填）</label>
+            <input type="text" id="txNote" placeholder="早餐、加油…">
+          </div>
+        </div>
+        <button class="btn block" type="submit">新增紀錄</button>
+      </form>
+    </div>
+
+    <div class="section-title">📝 本月明細</div>
+    <div class="seg" id="logFilter"></div>
+    <div class="card" style="margin-top:10px;">
+      <div class="stack" id="txList"></div>
+    </div>
+  </section>
+
+  <!-- ========== 固定收支 ========== -->
+  <section class="panel" id="panel-fixed">
+    <div class="section-title" style="margin-top:0;">💵 固定收入</div>
+    <div class="card">
+      <div class="stack" id="incomeList"></div>
+      <details class="editor">
+        <summary>新增固定收入</summary>
+        <form class="inline-form" id="incomeForm" style="margin-top:10px;">
+          <div class="grid2">
+            <div class="field"><label>項目名稱</label><input type="text" id="incName" required></div>
+            <div class="field"><label>金額</label><input type="number" id="incAmount" min="0" required></div>
+          </div>
+          <div class="field"><label>每月入帳日</label><input type="number" id="incDay" min="1" max="31" required></div>
+          <button class="btn block" type="submit">新增</button>
+        </form>
+      </details>
+    </div>
+
+    <div class="section-title">🧾 固定支出</div>
+    <div class="card">
+      <div class="stack" id="fixedList"></div>
+      <details class="editor">
+        <summary>新增固定支出</summary>
+        <form class="inline-form" id="fixedForm" style="margin-top:10px;">
+          <div class="grid2">
+            <div class="field"><label>項目名稱</label><input type="text" id="fxName" required></div>
+            <div class="field"><label>分類</label><select id="fxCategory"></select></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>金額</label><input type="number" id="fxAmount" min="0" required></div>
+            <div class="field">
+              <label>週期</label>
+              <select id="fxSchedule">
+                <option value="monthly">每月</option>
+                <option value="quarterly">每季（1/4/7/10月）</option>
+                <option value="yearly">每年</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>扣款日</label><input type="number" id="fxDay" min="1" max="31" placeholder="不確定可留空"></div>
+            <div class="field"><label>付款方式</label>
+              <select id="fxMethod">
+                <option>銀行轉帳</option>
+                <option>國泰世華信用卡</option>
+                <option>富邦信用卡</option>
+                <option>永豐信用卡</option>
+                <option>台新信用卡</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn block" type="submit">新增</button>
+        </form>
+      </details>
+    </div>
+  </section>
+
+  <!-- ========== 信用卡 ========== -->
+  <section class="panel" id="panel-cards">
+    <div class="section-title" style="margin-top:0;">💳 完整追蹤</div>
+    <div class="stack" id="trackedCards"></div>
+
+    <div class="section-title">🧾 登記帳單金額</div>
+    <div class="card">
+      <div class="sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">結帳日一到，把銀行帳單上的應繳總額登記在這裡，蓋過系統自己估算的金額。</div>
+      <form class="inline-form" id="statementForm">
+        <div class="grid2">
+          <div class="field"><label>卡別</label><select id="stmtCard"></select></div>
+          <div class="field"><label>應繳金額</label><input type="number" id="stmtAmount" min="0" required></div>
+        </div>
+        <div class="field"><label>繳款日期</label><input type="date" id="stmtDue" required></div>
+        <button class="btn block" type="submit">登記帳單</button>
+      </form>
+    </div>
+
+    <div class="section-title">↺ 最近已繳（誤觸可復原）</div>
+    <div class="card stack" id="paidHistory"></div>
+
+    <div class="section-title">🗒️ 僅記錄固定扣款</div>
+    <div class="card stack" id="untrackedCards"></div>
+
+    <div class="section-title">🧾 補登刷卡紀錄</div>
+    <div class="card">
+      <form class="inline-form" id="chargeForm">
+        <div class="grid2">
+          <div class="field"><label>卡別</label><select id="chgCard"></select></div>
+          <div class="field"><label>日期</label><input type="date" id="chgDate" required></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>金額</label><input type="number" id="chgAmount" min="0" required></div>
+          <div class="field"><label>備註</label><input type="text" id="chgNote" placeholder="選填"></div>
+        </div>
+        <button class="btn block" type="submit">加入本期刷卡</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ========== 股票 ========== -->
+  <section class="panel" id="panel-stocks" hidden>
+    <div class="card">
+      <div class="grid3">
+        <div class="stat"><div class="label">投資成本</div><div class="value num" id="stCost">$0</div></div>
+        <div class="stat"><div class="label">帳面市值</div><div class="value num" id="stValue">$0</div></div>
+        <div class="stat"><div class="label">未實現損益</div><div class="value num" id="stPL">$0</div></div>
+      </div>
+      <div class="sub" style="font-size:12px;color:var(--text-dim);margin-top:10px;" id="stAsOf"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row">
+        <div>
+          <div class="label" style="font-size:12px;color:var(--text-dim);">可購買股票資金</div>
+          <div class="num" style="font-size:22px;" id="stockCashDisplay">$0</div>
+        </div>
+        <button class="btn ghost small" data-action="edit-stockcash">修改</button>
+      </div>
+      <div class="sub" style="font-size:11.5px;color:var(--text-dim);margin-top:4px;" id="stockCashAsOf"></div>
+    </div>
+
+    <div class="section-title">🛒 買進股票</div>
+    <div class="card">
+      <div class="sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">選現有持股會加碼、自動重算平均成本；選「新股票」則新增一筆。成交金額會自動從上面的可用資金扣除。</div>
+      <form class="inline-form" id="buyForm">
+        <div class="field">
+          <label>股票</label>
+          <select id="buyTarget"></select>
+        </div>
+        <div class="grid2" id="buyNewFields" hidden>
+          <div class="field"><label>股票名稱</label><input type="text" id="buyNewName"></div>
+          <div class="field"><label>代號（選填）</label><input type="text" id="buyNewCode"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>股數</label><input type="number" id="buyShares" min="0" required></div>
+          <div class="field"><label>成交均價</label><input type="number" id="buyPrice" min="0" step="0.01" required></div>
+          <div class="field"><label>日期</label><input type="date" id="buyDate" required></div>
+        </div>
+        <div class="row" style="font-size:13px;color:var(--text-dim);">
+          <span>成交金額</span><span class="num" id="buyTotalPreview">$0</span>
+        </div>
+        <button class="btn block" type="submit">記錄買進</button>
+      </form>
+      <div class="stack" id="buyHistory" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="section-title">💸 賣出股票</div>
+    <div class="card">
+      <div class="sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">賣出會自動用平均成本結算損益、從持股扣除股數，賣出金額會加回可用資金。</div>
+      <form class="inline-form" id="sellForm">
+        <div class="field">
+          <label>股票</label>
+          <select id="sellTarget"></select>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>股數</label><input type="number" id="sellShares" min="0" required></div>
+          <div class="field"><label>成交均價</label><input type="number" id="sellPrice" min="0" step="0.01" required></div>
+          <div class="field"><label>日期</label><input type="date" id="sellDate" required></div>
+        </div>
+        <div class="row" style="font-size:13px;color:var(--text-dim);">
+          <span>賣出金額</span><span class="num" id="sellTotalPreview">$0</span>
+        </div>
+        <div class="row" style="font-size:13px;color:var(--text-dim);">
+          <span>預估已實現損益</span><span class="num" id="sellPlPreview">$0</span>
+        </div>
+        <button class="btn block" type="submit">記錄賣出</button>
+      </form>
+      <div class="stack" id="sellHistory" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="row" style="margin:16px 0 8px;">
+      <div class="section-title" style="margin:0;">持股明細</div>
+      <button class="btn secondary small" data-action="open-price-update">批次更新收盤價</button>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table id="stockTable">
+          <thead>
+            <tr><th>股票</th><th>股數</th><th>成本均價</th><th>現價</th><th>帳面損益</th><th>%</th></tr>
+          </thead>
+          <tbody id="stockTbody"></tbody>
+        </table>
+      </div>
+      <div class="sub" style="font-size:11.5px;color:var(--text-dim);margin-top:10px;line-height:1.5;">
+        此頁面無法連線股市資料源自動抓價（瀏覽器安全限制），請每日從券商 App 複製收盤價，用「批次更新收盤價」一次貼上即可，系統會自動重算損益。
+      </div>
+    </div>
+
+    <details class="editor" style="margin-top:16px;">
+      <summary>新增持股</summary>
+      <form class="inline-form" id="stockForm" style="margin-top:10px;">
+        <div class="grid2">
+          <div class="field"><label>股票名稱</label><input type="text" id="stkName" required></div>
+          <div class="field"><label>代號（選填）</label><input type="text" id="stkCode"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>股數</label><input type="number" id="stkShares" min="0" required></div>
+          <div class="field"><label>投資成本</label><input type="number" id="stkCost" min="0" required></div>
+          <div class="field"><label>現價</label><input type="number" id="stkPrice" min="0" step="0.01" required></div>
+        </div>
+        <button class="btn block" type="submit">新增</button>
+      </form>
+    </details>
+
+    <div class="card" id="priceUpdatePanel" hidden style="margin-top:16px;">
+      <div class="section-title" style="margin-top:0;">批次更新收盤價</div>
+      <div class="stack" id="priceUpdateList"></div>
+      <div class="row" style="margin-top:12px;gap:10px;">
+        <button class="btn secondary block" data-action="close-price-update">取消</button>
+        <button class="btn block" data-action="save-price-update">儲存並重算</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 預算 ========== -->
+  <section class="panel" id="panel-budget">
+    <div class="section-title" style="margin-top:0;">🥧 本月支出分類</div>
+    <div class="card" id="categoryChart"></div>
+
+    <div class="section-title">📊 分類預算 vs 實際</div>
+    <div class="card stack" id="budgetList"></div>
+
+    <div class="section-title">🏷️ 自訂分類</div>
+    <div class="card">
+      <div class="stack" id="categoryList"></div>
+      <form class="inline-form" id="categoryForm" style="margin-top:12px;">
+        <div class="grid2">
+          <div class="field"><label>分類名稱</label><input type="text" id="catName" required></div>
+          <div class="field">
+            <label>群組</label>
+            <select id="catGroup">
+              <option value="fixed">固定支出</option>
+              <option value="variable">變動支出</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="catBudgetField">
+          <label>每月預算（變動支出用）</label>
+          <input type="number" id="catBudget" min="0" placeholder="0">
+        </div>
+        <button class="btn block" type="submit">新增分類</button>
+      </form>
+    </div>
+
+    <div class="section-title">💾 資料備份</div>
+    <div class="card">
+      <div class="sub" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">資料只存在這台裝置的瀏覽器裡。換手機或清除瀏覽器資料前，先匯出備份；到新裝置再匯入。</div>
+      <div class="row" style="gap:10px;">
+        <button class="btn secondary block" id="exportBtn">匯出備份</button>
+        <button class="btn block" id="importBtn">匯入備份</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+
+    <div class="section-title">⚕️ 醫療險存款進度</div>
+    <div class="card" id="medicalCard"></div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-tab="overview" class="active">
+    <span class="emoji">🏠</span>
+    總覽
+  </button>
+  <button data-tab="log">
+    <span class="emoji">📝</span>
+    記帳
+  </button>
+  <button data-tab="fixed">
+    <span class="emoji">🗂️</span>
+    固定收支
+  </button>
+  <button data-tab="cards">
+    <span class="emoji">💳</span>
+    信用卡
+  </button>
+  <button data-tab="budget">
+    <span class="emoji">🥧</span>
+    預算
+  </button>
+</nav>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- helpers ---------------- */
+  var uid = function(){ return Math.random().toString(36).slice(2,10); };
+  var fmt = function(n){
+    n = Math.round(Number(n)||0);
+    var sign = n < 0 ? "-" : "";
+    return sign + "$" + Math.abs(n).toLocaleString("zh-TW");
+  };
+  var pad = function(n){ return String(n).padStart(2,"0"); };
+  var toISO = function(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+  var monthKey = function(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1); };
+  var today = new Date();
+  var todayISO = toISO(today);
+
+  var WEEKDAYS = ["日","一","二","三","四","五","六"];
+
+  /* ---------------- category icons (cute, quick to recognize) ---------------- */
+  var CATEGORY_ICONS = {
+    "居住":"🏠","交通":"🚗","保險":"🛡️","通訊訂閱":"📱","飲食":"🍜","交際":"🎉","教育費":"📚",
+    "信用卡費":"💳","儲蓄":"🐷","其他":"🏷️","其他支出":"🏷️","其他收入":"💰",
+    "薪資":"💼","房租收入":"🏘️","客服收入":"🎧"
+  };
+  function categoryIcon(name){ return CATEGORY_ICONS[name] || "🏷️"; }
+
+  /* ---------------- chart palette (categorical, CVD-safe) ---------------- */
+  var CHART_COLORS_LIGHT = ["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#4a3aa7","#e34948"];
+  var CHART_COLORS_DARK  = ["#3987e5","#d95926","#199e70","#c98500","#d55181","#008300","#9085e9","#e66767"];
+  function isDarkMode(){
+    var attr = document.documentElement.getAttribute("data-theme");
+    if(attr === "dark") return true;
+    if(attr === "light") return false;
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+  function chartColor(i){
+    var arr = isDarkMode() ? CHART_COLORS_DARK : CHART_COLORS_LIGHT;
+    return arr[i % arr.length];
+  }
+
+  /* ---------------- default state (Jing's real data) ---------------- */
+  var DEFAULT_STATE = {
+    accountBalance: 0,
+    balanceAsOf: todayISO,
+    stockCash: 0,
+    stockCashAsOf: todayISO,
+    stockBuys: [],
+    stockSells: [],
+    incomes: [],
+    fixedExpenses: [],
+    categories: {
+      fixed: ["居住","交通","保險","通訊訂閱"],
+      variable: [
+        {name:"飲食", budget:10000},
+        {name:"交際", budget:3000},
+        {name:"教育費", budget:2000}
+      ]
+    },
+    transactions: [],
+    creditCards: [
+      {id:"cathay", name:"國泰世華", billDay:17, dueDay:5, tracked:true},
+      {id:"fubon", name:"富邦", billDay:20, dueDay:6, tracked:true},
+      {id:"sinopac", name:"永豐", billDay:null, dueDay:null, tracked:false, fixedNote:""},
+      {id:"taishin", name:"台新", billDay:null, dueDay:null, tracked:false, fixedNote:""}
+    ],
+    cardCharges: [],
+    statements: [],
+    stocks: [],
+    stocksAsOf: todayISO,
+    savingsGoal: { monthly: 8000 },
+    medicalCrunch: { target: 40000, months: ["2026-10","2026-11","2026-12"], monthlySuggested: 13400, saved: 0 }
+  };
+
+  var STORAGE_KEY = "jing-finance-tracker-v1";
+  var state;
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_STATE));
+  }catch(e){
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  }
+
+  // fill in any keys added after this device's data was first saved
+  function ensureShape(s){
+    Object.keys(DEFAULT_STATE).forEach(function(k){
+      if(s[k] === undefined) s[k] = JSON.parse(JSON.stringify(DEFAULT_STATE[k]));
+    });
+    return s;
+  }
+  ensureShape(state);
+
+  // one-time seed: the two statements Jing reported (Sept cycle, due Oct)
+  function seedRequestedStatements(){}
+
+  // one-time: apply the balance figures Jing reported (2026-09-20)
+  function applyBalanceSeed(){}
+
+  /* ---- sync layer: db capability (cross-device) with localStorage as a fast local cache ---- */
+  var syncState = "local"; // local | syncing | synced | unavailable
+  var dbDoc = null;
+  var writeTimer = null;
+
+  function persistLocal(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function save(){
+    persistLocal();
+    if(dbDoc){
+      setSyncState("syncing");
+      clearTimeout(writeTimer);
+      writeTimer = setTimeout(function(){
+        dbDoc.set(state).then(function(){
+          setSyncState("synced");
+        }).catch(function(){
+          setSyncState("unavailable");
+        });
+      }, 300);
+    }
+  }
+  function setSyncState(s){
+    syncState = s;
+    var el = document.getElementById("syncLabel");
+    if(!el) return;
+    var labels = {local:"僅存本機", syncing:"同步中…", synced:"已跨裝置同步", unavailable:"同步失敗，僅存本機"};
+    el.textContent = labels[s] || "";
+    el.className = "sync-pill " + s;
+  }
+
+  function initSync(){ setSyncState("local"); }
+
+  /* ---------------- category helpers ---------------- */
+  function allExpenseCategories(){
+    return state.categories.fixed.concat(state.categories.variable.map(function(v){return v.name;}));
+  }
+  function isVariableCategory(name){
+    return state.categories.variable.some(function(v){ return v.name === name; });
+  }
+
+  /* ---------------- recurrence math ---------------- */
+  // returns next Date (>= fromDate) that this fixed item occurs on
+  function nextOccurrence(item, fromDate){
+    var y = fromDate.getFullYear(), m = fromDate.getMonth();
+    if(item.schedule === "monthly"){
+      var day = item.day || 1;
+      var d = new Date(y, m, Math.min(day, daysInMonth(y,m)));
+      if(d < stripTime(fromDate)) d = new Date(y, m+1, Math.min(day, daysInMonth(y,m+1)));
+      return d;
+    }
+    if(item.schedule === "quarterly"){
+      var day2 = item.day || 1;
+      var qMonths = [0,3,6,9];
+      for(var i=0;i<8;i++){
+        var mm = m + i;
+        var yy = y + Math.floor(mm/12);
+        var mIdx = ((mm%12)+12)%12;
+        if(qMonths.indexOf(mIdx) === -1) continue;
+        var dd = new Date(yy, mIdx, Math.min(day2, daysInMonth(yy,mIdx)));
+        if(dd >= stripTime(fromDate)) return dd;
+      }
+    }
+    if(item.schedule === "yearly"){
+      var mo = (item.month || 1) - 1;
+      var da = item.day || 1;
+      var cand = new Date(y, mo, Math.min(da, daysInMonth(y,mo)));
+      if(cand < stripTime(fromDate)) cand = new Date(y+1, mo, Math.min(da, daysInMonth(y+1,mo)));
+      return cand;
+    }
+    return null;
+  }
+  function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+  function stripTime(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+  /* ---------------- tabs ---------------- */
+  var panels = document.querySelectorAll(".panel");
+  var tabBtns = document.querySelectorAll("nav.tabbar button");
+  tabBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabBtns.forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      var target = btn.getAttribute("data-tab");
+      panels.forEach(function(p){ p.classList.toggle("active", p.id === "panel-"+target); });
+      renderAll();
+    });
+  });
+
+  document.getElementById("todayLabel").textContent =
+    today.getFullYear()+"/"+pad(today.getMonth()+1)+"/"+pad(today.getDate())+" ("+WEEKDAYS[today.getDay()]+")";
+
+  /* ---------------- OVERVIEW ---------------- */
+  function renderOverview(){
+    document.getElementById("balanceDisplay").textContent = fmt(state.accountBalance);
+    document.getElementById("balanceAsOf").textContent = "餘額基準日：" + state.balanceAsOf;
+
+    var mk = monthKey(today);
+    var txThisMonth = state.transactions.filter(function(t){ return t.date.slice(0,7) === mk; });
+    var incTx = sum(txThisMonth.filter(function(t){return t.type==="income";}));
+    // 轉去儲蓄不算「花掉」，所以不計入本月支出
+    var expTx = sum(txThisMonth.filter(function(t){return t.type==="expense" && t.category!=="儲蓄";}));
+
+    var fixedIncomeTotal = sum2(state.incomes);
+    var fixedExpenseTotal = state.fixedExpenses.reduce(function(a,f){
+      return a + effectiveMonthlyAmount(f);
+    },0);
+
+    var totalIncome = fixedIncomeTotal + incTx;
+    var totalExpense = fixedExpenseTotal + expTx;
+
+    document.getElementById("ovIncome").textContent = fmt(totalIncome);
+    document.getElementById("ovExpense").textContent = fmt(totalExpense);
+    var net = totalIncome - totalExpense;
+    var netEl = document.getElementById("ovNet");
+    netEl.textContent = fmt(net);
+    netEl.style.color = net >= 0 ? "var(--success)" : "var(--danger)";
+
+    var heroTotal = renderCategoryChart(document.getElementById("heroChart"));
+    document.getElementById("heroSpent").textContent = fmt(heroTotal);
+    document.getElementById("heroSub").textContent =
+      "收入 " + fmt(totalIncome) + " · 結餘 " + fmt(net) + " · 已記 " + txThisMonth.length + " 筆";
+
+    renderSavingsCard();
+    renderTimeline();
+    renderCardReminders();
+  }
+
+  function sum(arr){ return arr.reduce(function(a,t){return a+Number(t.amount||0);},0); }
+  function sum2(arr){ return arr.reduce(function(a,t){return a+Number(t.amount||0);},0); }
+
+  function monthlyEquivalent(f){
+    if(f.isMedical){
+      if(inCrunchWindow()) return state.medicalCrunch.monthlySuggested;
+      return Math.ceil(f.amount/12/100)*100;
+    }
+    if(f.schedule === "monthly") return f.amount;
+    if(f.schedule === "quarterly") return Math.ceil((f.amount/3)/100)*100;
+    if(f.schedule === "yearly") return Math.ceil((f.amount/12)/100)*100;
+    return f.amount;
+  }
+  function inCrunchWindow(){
+    return state.medicalCrunch.months.indexOf(monthKey(today)) !== -1;
+  }
+  // true if this fixed item has been marked "跳過" for the current month (e.g. already paid manually)
+  function isSkippedThisMonth(f){
+    return !!(f.skipMonths && f.skipMonths.indexOf(monthKey(today)) !== -1);
+  }
+  // the amount this item actually contributes to *this* month's totals (0 if skipped)
+  function effectiveMonthlyAmount(f){
+    return isSkippedThisMonth(f) ? 0 : monthlyEquivalent(f);
+  }
+
+  function renderSavingsCard(){
+    var box = document.getElementById("savingsCard");
+    var crunch = inCrunchWindow();
+    if(crunch){
+      var mc = state.medicalCrunch;
+      var pct = Math.min(100, Math.round((mc.saved / mc.target)*100));
+      box.innerHTML =
+        '<div class="row"><span class="pill warning">醫療險存款模式</span><span class="num" style="font-size:13px;">'+pct+'%</span></div>'+
+        '<div style="margin:10px 0 6px;font-size:13px;color:var(--text-dim);">一般儲蓄目標本月暫停，資源集中存醫療險</div>'+
+        '<div class="bar-track"><div class="bar-fill warning" style="width:'+pct+'%;"></div></div>'+
+        '<div class="row" style="margin-top:8px;"><span class="num">'+fmt(mc.saved)+' / '+fmt(mc.target)+'</span>'+
+        '<span class="sub" style="font-size:12px;color:var(--text-dim);">建議每月存 '+fmt(mc.monthlySuggested)+'</span></div>';
+    } else {
+      var mkKey = monthKey(today);
+      // 「儲蓄」分類的收入或支出（轉帳到儲蓄帳戶）都算存進儲蓄目標的錢
+      var saved = sum(state.transactions.filter(function(t){
+        return t.date.slice(0,7)===mkKey && t.category==="儲蓄";
+      }));
+      var goal = state.savingsGoal.monthly;
+      var pct2 = Math.min(100, Math.round((saved/goal)*100)) || 0;
+      box.innerHTML =
+        '<div class="row"><span class="pill accent">一般儲蓄目標</span><span class="num" style="font-size:13px;">'+pct2+'%</span></div>'+
+        '<div class="bar-track" style="margin-top:10px;"><div class="bar-fill" style="width:'+pct2+'%;"></div></div>'+
+        '<div class="row" style="margin-top:8px;"><span class="num">'+fmt(saved)+' / '+fmt(goal)+'</span>'+
+        '<span class="sub" style="font-size:12px;color:var(--text-dim);">每月目標 <button class="iconbtn" data-action="edit-savings-goal" aria-label="修改每月儲蓄目標" style="margin-left:4px;">✎</button></span></div>';
+      var savingsGoalBtn = box.querySelector('[data-action="edit-savings-goal"]');
+      if(savingsGoalBtn){
+        savingsGoalBtn.addEventListener("click", function(e){
+          e.stopPropagation();
+          var v = prompt("輸入每月儲蓄目標金額", state.savingsGoal.monthly);
+          if(v === null) return;
+          var n = Number(v);
+          if(!isNaN(n) && n > 0){
+            state.savingsGoal.monthly = n;
+            save();
+            renderAll();
+          }
+        });
+      }
+    }
+  }
+
+  function renderTimeline(){
+    var el = document.getElementById("timelineList");
+    var events = [];
+    var horizon = new Date(today); horizon.setDate(horizon.getDate()+30);
+
+    state.incomes.forEach(function(inc){
+      var d = nextOccurrence({schedule:"monthly", day:inc.day}, today);
+      if(d && d <= horizon) events.push({date:d, name:inc.name, amount:inc.amount, type:"income"});
+    });
+    state.fixedExpenses.forEach(function(f){
+      if(f.day == null) return;
+      var d = nextOccurrence(f, today);
+      // skip past any occurrence that falls in a month this item was marked "跳過" for
+      while(d && f.skipMonths && f.skipMonths.indexOf(monthKey(d)) !== -1){
+        var nextFrom = new Date(d); nextFrom.setDate(nextFrom.getDate()+1);
+        d = nextOccurrence(f, nextFrom);
+      }
+      if(d && d <= horizon){
+        var amt = f.isMedical ? f.amount : f.amount;
+        events.push({date:d, name:f.name, amount:amt, type:"expense"});
+      }
+    });
+    events.sort(function(a,b){ return a.date - b.date; });
+
+    if(!events.length){ el.innerHTML = '<div class="empty">近期沒有已排定的固定收支</div>'; return; }
+
+    var runningBalance = state.accountBalance;
+    el.innerHTML = events.map(function(ev){
+      runningBalance += ev.type==="income" ? ev.amount : -ev.amount;
+      return '<div class="tl-item">'+
+        '<div class="tl-date"><b>'+(ev.date.getMonth()+1)+'/'+ev.date.getDate()+'</b>'+WEEKDAYS[ev.date.getDay()]+'</div>'+
+        '<div class="tl-name">'+ev.name+'<div class="sub" style="font-size:11px;color:var(--text-dim);">餘額約 '+fmt(runningBalance)+'</div></div>'+
+        '<div class="tl-amt" style="color:'+(ev.type==="income"?"var(--success)":"var(--danger)")+';">'+(ev.type==="income"?"+":"-")+"$"+Math.round(ev.amount).toLocaleString("zh-TW")+'</div>'+
+        '</div>';
+    }).join("");
+  }
+
+  function renderCardReminders(){
+    var el = document.getElementById("cardReminders");
+    var tracked = state.creditCards.filter(function(c){ return c.tracked; });
+    if(!tracked.length){ el.innerHTML = '<div class="empty">沒有追蹤中的信用卡</div>'; return; }
+    el.innerHTML = tracked.map(function(c){
+      var stmt = activeStatement(c.id);
+      var amount = stmt ? stmt.amount : currentCycleTotal(c.id, c.billDay);
+      var due = stmt ? new Date(stmt.dueDate) : nextDueDate(c.dueDay);
+      var daysLeft = Math.ceil((due - stripTime(today))/86400000);
+      return '<div class="row">'+
+        '<div class="meta"><div class="name" style="font-weight:700;">'+c.name+(stmt?' <span class="pill warning" style="font-size:10px;">帳單</span>':'')+'</div>'+
+        '<div class="sub" style="font-size:12px;color:var(--text-dim);">繳款日 '+(due.getMonth()+1)+'/'+due.getDate()+'，還有 '+daysLeft+' 天</div></div>'+
+        '<div class="num" style="color:var(--warning);">'+fmt(amount)+'</div>'+
+        '</div>';
+    }).join("");
+  }
+
+  function nextDueDate(dueDay){
+    var d = new Date(today.getFullYear(), today.getMonth(), Math.min(dueDay, daysInMonth(today.getFullYear(),today.getMonth())));
+    if(d < stripTime(today)) d = new Date(today.getFullYear(), today.getMonth()+1, Math.min(dueDay, daysInMonth(today.getFullYear(),today.getMonth()+1)));
+    return d;
+  }
+
+  function cardMethodLabel(cardId){
+    var map = {cathay:"國泰世華信用卡", fubon:"富邦信用卡", sinopac:"永豐信用卡", taishin:"台新信用卡"};
+    return map[cardId];
+  }
+
+  // the bank's actual statement for this card, if one has been registered and not yet paid
+  function activeStatement(cardId){
+    var candidates = state.statements.filter(function(s){ return s.cardId === cardId && !s.paid; });
+    if(!candidates.length) return null;
+    candidates.sort(function(a,b){ return new Date(a.dueDate) - new Date(b.dueDate); });
+    return candidates[0];
+  }
+
+  function currentCycleTotal(cardId, billDay){
+    // cycle = (previous bill day, this bill day]
+    var y = today.getFullYear(), m = today.getMonth();
+    var end = new Date(y, m, Math.min(billDay, daysInMonth(y,m)));
+    if(end < stripTime(today)) end = new Date(y, m+1, Math.min(billDay, daysInMonth(y,m+1)));
+    var start = new Date(end); start.setMonth(start.getMonth()-1);
+
+    var total = 0;
+    var methodLabel = cardMethodLabel(cardId);
+    state.cardCharges.filter(function(c){ return c.cardId === cardId; }).forEach(function(c){
+      var d = new Date(c.date);
+      if(d > start && d <= end) total += Number(c.amount||0);
+    });
+    state.transactions.filter(function(t){ return t.method === methodLabel; }).forEach(function(t){
+      var d = new Date(t.date);
+      if(d > start && d <= end) total += Number(t.amount||0);
+    });
+    state.fixedExpenses.filter(function(f){ return f.method === methodLabel && !f.isMedical; }).forEach(function(f){
+      total += monthlyEquivalent(f);
+    });
+    return total;
+  }
+
+  /* ---------------- LOG (transactions) ---------------- */
+  var logFilterCat = "all";
+  function renderLogForm(){
+    var sel = document.getElementById("txCategory");
+    var type = document.getElementById("txType").value;
+    var cats = type === "income" ? ["薪資","房租收入","客服收入","儲蓄","其他收入"] : ["儲蓄"].concat(allExpenseCategories()).concat(["其他"]);
+    sel.innerHTML = cats.map(function(c){ return '<option value="'+c+'">'+categoryIcon(c)+' '+c+'</option>'; }).join("");
+    document.getElementById("txDate").value = todayISO;
+  }
+  document.getElementById("txType").addEventListener("change", renderLogForm);
+
+  document.getElementById("txForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var type = document.getElementById("txType").value;
+    var method = document.getElementById("txMethod").value;
+    var category = document.getElementById("txCategory").value;
+    var amount = Number(document.getElementById("txAmount").value||0);
+    state.transactions.unshift({
+      id: uid(),
+      type: type,
+      date: document.getElementById("txDate").value,
+      category: category,
+      amount: amount,
+      method: method,
+      note: document.getElementById("txNote").value
+    });
+    // 選銀行轉帳時，同步反映到帳戶餘額（收入加、支出減）；但「儲蓄」收入是把錢從帳戶轉存起來，不算增加帳戶餘額
+    var isSavingsIncome = (type === "income" && category === "儲蓄");
+    if(method === "銀行轉帳" && !isSavingsIncome){
+      state.accountBalance = Number(state.accountBalance||0) + (type==="income" ? amount : -amount);
+      state.balanceAsOf = todayISO;
+    }
+    save();
+    document.getElementById("txAmount").value = "";
+    document.getElementById("txNote").value = "";
+    renderAll();
+  });
+
+  function renderLogFilter(){
+    var mk = monthKey(today);
+    var cats = ["all"].concat(uniq(state.transactions.filter(function(t){return t.date.slice(0,7)===mk;}).map(function(t){return t.category;})));
+    var el = document.getElementById("logFilter");
+    el.innerHTML = cats.map(function(c){
+      return '<button data-cat="'+c+'" class="'+(c===logFilterCat?"active":"")+'">'+(c==="all"?"全部":c)+'</button>';
+    }).join("");
+    el.querySelectorAll("button").forEach(function(b){
+      b.addEventListener("click", function(){ logFilterCat = b.getAttribute("data-cat"); renderLog(); });
+    });
+  }
+  function uniq(arr){ return arr.filter(function(v,i){ return arr.indexOf(v)===i; }); }
+
+  function renderLog(){
+    renderLogFilter();
+    var mk = monthKey(today);
+    var list = state.transactions.filter(function(t){ return t.date.slice(0,7)===mk; });
+    if(logFilterCat !== "all") list = list.filter(function(t){ return t.category === logFilterCat; });
+    var el = document.getElementById("txList");
+    if(!list.length){ el.innerHTML = '<div class="empty">本月還沒有紀錄</div>'; return; }
+    el.innerHTML = list.map(function(t){
+      return '<div class="list-item">'+
+        '<div class="meta"><div class="name">'+categoryIcon(t.category)+' '+t.category+(t.note?'　'+t.note:'')+'</div>'+
+        '<div class="sub">'+t.date+' · '+t.method+'</div></div>'+
+        '<div class="amt num" style="color:'+(t.type==="income"?"var(--success)":"var(--danger)")+';">'+(t.type==="income"?"+":"-")+"$"+Math.round(t.amount).toLocaleString("zh-TW")+'</div>'+
+        '<button class="iconbtn" data-del-tx="'+t.id+'" aria-label="刪除">✕</button>'+
+        '</div>';
+    }).join("");
+    el.querySelectorAll("[data-del-tx]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var id = b.getAttribute("data-del-tx");
+        var tx = state.transactions.find(function(t){ return t.id === id; });
+        // 刪除銀行轉帳紀錄時，把帳戶餘額的影響也還原回去（「儲蓄」收入本來就沒有加進餘額，刪除時也不用還原）
+        if(tx && tx.method === "銀行轉帳" && !(tx.type === "income" && tx.category === "儲蓄")){
+          state.accountBalance = Number(state.accountBalance||0) - (tx.type==="income" ? tx.amount : -tx.amount);
+          state.balanceAsOf = todayISO;
+        }
+        state.transactions = state.transactions.filter(function(t){ return t.id !== id; });
+        save(); renderAll();
+      });
+    });
+  }
+
+  /* ---------------- FIXED income/expense ---------------- */
+  function renderIncomeList(){
+    var el = document.getElementById("incomeList");
+    if(!state.incomes.length){ el.innerHTML = '<div class="empty">尚未設定固定收入</div>'; return; }
+    el.innerHTML = state.incomes.map(function(i){
+      return '<div class="list-item"><div class="meta"><div class="name">'+categoryIcon(i.name)+' '+i.name+'</div>'+
+        '<div class="sub">每月 '+i.day+' 號</div></div>'+
+        '<div class="amt num" style="color:var(--success);">'+fmt(i.amount)+'</div>'+
+        '<button class="iconbtn" data-del-inc="'+i.id+'" aria-label="刪除">✕</button></div>';
+    }).join("");
+    el.querySelectorAll("[data-del-inc]").forEach(function(b){
+      b.addEventListener("click", function(){
+        state.incomes = state.incomes.filter(function(i){ return i.id !== b.getAttribute("data-del-inc"); });
+        save(); renderAll();
+      });
+    });
+  }
+  document.getElementById("incomeForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    state.incomes.push({
+      id: uid(),
+      name: document.getElementById("incName").value,
+      amount: Number(document.getElementById("incAmount").value||0),
+      day: Number(document.getElementById("incDay").value||1)
+    });
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  function scheduleLabel(f){
+    if(f.isMedical) return (inCrunchWindow() ? "存款倒數中（10-12月）" : "每年12月底") + (f.method?" · "+f.method:"");
+    if(f.schedule === "monthly") return (f.day ? "每月 "+f.day+" 號" : "每月固定") + (f.method?" · "+f.method:"");
+    if(f.schedule === "quarterly") return "每季 "+f.day+" 號（攤提 "+fmt(monthlyEquivalent(f))+"/月）" + (f.method?" · "+f.method:"");
+    if(f.schedule === "yearly") return "每年 "+(f.month||12)+" 月（攤提 "+fmt(monthlyEquivalent(f))+"/月）" + (f.method?" · "+f.method:"");
+    return f.method||"";
+  }
+
+  function renderFixedList(){
+    var el = document.getElementById("fixedList");
+    var groups = {};
+    state.fixedExpenses.forEach(function(f){
+      groups[f.category] = groups[f.category] || [];
+      groups[f.category].push(f);
+    });
+    var html = "";
+    Object.keys(groups).forEach(function(cat){
+      var items = groups[cat];
+      var subtotal = items.reduce(function(a,f){return a+(f.isMedical?monthlyEquivalent(f):effectiveMonthlyAmount(f));},0);
+      html += '<div style="margin-bottom:4px;">'+
+        '<div class="row" style="padding-top:8px;"><span class="pill accent">'+categoryIcon(cat)+' '+cat+'</span><span class="num" style="font-size:13px;">'+fmt(subtotal)+'/月</span></div>';
+      html += items.map(function(f){
+        var skipped = isSkippedThisMonth(f);
+        return '<div class="list-item"><div class="meta"><div class="name">'+f.name+(skipped?' <span class="pill warning" style="font-size:10px;">本月已跳過</span>':'')+'</div>'+
+          '<div class="sub">'+scheduleLabel(f)+'</div></div>'+
+          '<div class="amt num" style="color:'+(skipped?"var(--text-dim)":"var(--danger)")+';">'+fmt(f.isMedical && inCrunchWindow() ? state.medicalCrunch.monthlySuggested : monthlyEquivalent(f))+'</div>'+
+          '<button class="iconbtn" data-toggle-skip="'+f.id+'" aria-label="'+(skipped?"取消跳過":"本月跳過")+'" title="'+(skipped?"取消跳過本月":"本月已繳過，跳過這個月不扣款")+'">'+(skipped?"↺":"⏭")+'</button>'+
+          '<button class="iconbtn" data-del-fx="'+f.id+'" aria-label="刪除">✕</button></div>';
+      }).join("");
+      html += '</div>';
+    });
+    el.innerHTML = html || '<div class="empty">尚未設定固定支出</div>';
+    el.querySelectorAll("[data-del-fx]").forEach(function(b){
+      b.addEventListener("click", function(){
+        state.fixedExpenses = state.fixedExpenses.filter(function(f){ return f.id !== b.getAttribute("data-del-fx"); });
+        save(); renderAll();
+      });
+    });
+    el.querySelectorAll("[data-toggle-skip]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var id = b.getAttribute("data-toggle-skip");
+        var f = state.fixedExpenses.find(function(f){ return f.id === id; });
+        if(!f) return;
+        var mk = monthKey(today);
+        f.skipMonths = f.skipMonths || [];
+        var idx = f.skipMonths.indexOf(mk);
+        if(idx === -1) f.skipMonths.push(mk); else f.skipMonths.splice(idx,1);
+        save(); renderAll();
+      });
+    });
+  }
+
+  function fillCategorySelect(sel){
+    sel.innerHTML = state.categories.fixed.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join("");
+  }
+
+  document.getElementById("fixedForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var schedule = document.getElementById("fxSchedule").value;
+    var dayVal = document.getElementById("fxDay").value;
+    state.fixedExpenses.push({
+      id: uid(),
+      name: document.getElementById("fxName").value,
+      category: document.getElementById("fxCategory").value,
+      amount: Number(document.getElementById("fxAmount").value||0),
+      method: document.getElementById("fxMethod").value,
+      schedule: schedule,
+      day: dayVal ? Number(dayVal) : (schedule==="monthly" ? null : 1)
+    });
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  /* ---------------- CREDIT CARDS ---------------- */
+  function renderCards(){
+    var trackedEl = document.getElementById("trackedCards");
+    var tracked = state.creditCards.filter(function(c){ return c.tracked; });
+    trackedEl.innerHTML = tracked.map(function(c){
+      var estCyc = currentCycleTotal(c.id, c.billDay);
+      var estDue = nextDueDate(c.dueDay);
+      var stmt = activeStatement(c.id);
+      var primaryAmount = stmt ? stmt.amount : estCyc;
+      var primaryDue = stmt ? new Date(stmt.dueDate) : estDue;
+      return '<div class="card">'+
+        '<div class="row"><h3 style="font-size:15.5px;">'+c.name+'</h3><span class="pill accent">結帳 '+c.billDay+'日 · 繳款 '+c.dueDay+'日</span></div>'+
+        '<div class="row" style="align-items:flex-end;margin-top:8px;">'+
+        '<div><div class="num" style="font-size:24px;">'+fmt(primaryAmount)+'</div>'+
+        '<div class="sub" style="font-size:12px;color:var(--text-dim);margin-top:2px;">'+
+          (stmt ? '已出帳單應繳 · 繳款 '+(primaryDue.getMonth()+1)+'/'+primaryDue.getDate() : '本期估計（未出帳）· 預計 '+(primaryDue.getMonth()+1)+'/'+primaryDue.getDate())+
+        '</div></div>'+
+        (stmt ? '<button class="btn small secondary" data-mark-paid="'+stmt.id+'">標記已繳</button>' : '')+
+        '</div>'+
+        (stmt ? '<div class="sub" style="font-size:11px;color:var(--text-dim);margin-top:8px;">新一期已刷約 '+fmt(estCyc)+'</div>' : '')+
+        '</div>';
+    }).join("");
+    trackedEl.querySelectorAll("[data-mark-paid]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var id = b.getAttribute("data-mark-paid");
+        var s = state.statements.find(function(s){ return s.id === id; });
+        if(!s) return;
+        s.paid = true;
+        s.paidDate = todayISO;
+        // 同步新增一筆「現金」支出，記錄這筆卡費是用現金繳的
+        var cardInfo = state.creditCards.find(function(c){ return c.id === s.cardId; });
+        var tx = {
+          id: uid(),
+          type: "expense",
+          date: todayISO,
+          category: "信用卡費",
+          amount: Number(s.amount || 0),
+          method: "現金",
+          note: (cardInfo ? cardInfo.name : "") + "信用卡帳單" + (s.cycle ? "（" + s.cycle + "）" : "")
+        };
+        state.transactions.unshift(tx);
+        s.paidTxId = tx.id; // 記住對應的現金支出，復原時一起移除
+        save(); renderAll();
+      });
+    });
+
+    renderPaidHistory();
+
+    var untrackedEl = document.getElementById("untrackedCards");
+    var untracked = state.creditCards.filter(function(c){ return !c.tracked; });
+    untrackedEl.innerHTML = untracked.map(function(c){
+      return '<div class="list-item"><div class="meta"><div class="name">'+c.name+'</div>'+
+        '<div class="sub">'+(c.fixedNote||"")+'</div></div></div>';
+    }).join("");
+
+    var sel = document.getElementById("chgCard");
+    sel.innerHTML = tracked.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join("");
+    document.getElementById("chgDate").value = todayISO;
+
+    var stmtSel = document.getElementById("stmtCard");
+    stmtSel.innerHTML = tracked.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join("");
+    document.getElementById("stmtDue").value = toISO(nextDueDate(tracked[0] ? tracked[0].dueDay : 5));
+  }
+
+  // 最近標記「已繳」的帳單，誤觸時可以一鍵復原（取消已繳、移除自動產生的現金支出紀錄）
+  function renderPaidHistory(){
+    var el = document.getElementById("paidHistory");
+    if(!el) return;
+    var paid = state.statements.filter(function(s){ return s.paid; })
+      .sort(function(a,b){ return (b.paidDate||"").localeCompare(a.paidDate||""); })
+      .slice(0, 5);
+    if(!paid.length){ el.innerHTML = '<div class="empty">還沒有已繳紀錄</div>'; return; }
+    el.innerHTML = paid.map(function(s){
+      var cardInfo = state.creditCards.find(function(c){ return c.id === s.cardId; });
+      return '<div class="list-item"><div class="meta"><div class="name">'+(cardInfo?cardInfo.name:s.cardId)+'</div>'+
+        '<div class="sub">'+(s.paidDate||"")+' 標記已繳 · '+fmt(s.amount)+'</div></div>'+
+        '<button class="btn small secondary" data-undo-paid="'+s.id+'">復原</button></div>';
+    }).join("");
+    el.querySelectorAll("[data-undo-paid]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var id = b.getAttribute("data-undo-paid");
+        var s = state.statements.find(function(s){ return s.id === id; });
+        if(!s) return;
+        s.paid = false;
+        if(s.paidTxId){
+          state.transactions = state.transactions.filter(function(t){ return t.id !== s.paidTxId; });
+        }
+        delete s.paidDate;
+        delete s.paidTxId;
+        save(); renderAll();
+      });
+    });
+  }
+
+  document.getElementById("statementForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var cardId = document.getElementById("stmtCard").value;
+    var dueDate = document.getElementById("stmtDue").value;
+    var cycle = monthKey(new Date(new Date(dueDate).getFullYear(), new Date(dueDate).getMonth()-1, 1));
+    // replace any earlier unpaid statement for this card so the newest bill wins
+    state.statements = state.statements.filter(function(s){ return !(s.cardId===cardId && !s.paid); });
+    state.statements.push({
+      id: uid(),
+      cardId: cardId,
+      cycle: cycle,
+      amount: Number(document.getElementById("stmtAmount").value||0),
+      dueDate: dueDate,
+      paid: false
+    });
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  document.getElementById("chargeForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    state.cardCharges.push({
+      id: uid(),
+      cardId: document.getElementById("chgCard").value,
+      date: document.getElementById("chgDate").value,
+      amount: Number(document.getElementById("chgAmount").value||0),
+      note: document.getElementById("chgNote").value
+    });
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  /* ---------------- STOCKS ---------------- */
+  function renderStocks(){
+    var totalCost = state.stocks.reduce(function(a,s){return a+Number(s.cost||0);},0);
+    var totalValue = state.stocks.reduce(function(a,s){return a+Number(s.shares||0)*Number(s.price||0);},0);
+    var pl = totalValue - totalCost;
+    document.getElementById("stCost").textContent = fmt(totalCost);
+    document.getElementById("stValue").textContent = fmt(totalValue);
+    var plEl = document.getElementById("stPL");
+    plEl.textContent = (pl>=0?"+":"") + fmt(pl);
+    plEl.style.color = pl>=0 ? "var(--success)" : "var(--danger)";
+    var realizedTotal = state.stockSells.reduce(function(a,s){return a+Number(s.realized||0);},0);
+    var asOfText = "收盤價更新日：" + state.stocksAsOf;
+    if(state.stockSells.length){
+      asOfText += " · 累計已實現損益 " + (realizedTotal>=0?"+":"") + fmt(realizedTotal);
+    }
+    document.getElementById("stAsOf").textContent = asOfText;
+
+    var tbody = document.getElementById("stockTbody");
+    tbody.innerHTML = state.stocks.map(function(s){
+      var value = s.shares * s.price;
+      var spl = value - s.cost;
+      var pct = s.cost ? (spl/s.cost*100).toFixed(1) : "0.0";
+      var avgCost = s.shares ? (s.cost/s.shares).toFixed(2) : "0";
+      return '<tr class="'+(spl>=0?"pos":"neg")+'">'+
+        '<td>'+s.name+(s.code?'<div class="sub" style="font-size:10.5px;color:var(--text-dim);">'+s.code+'</div>':'')+'</td>'+
+        '<td class="num">'+s.shares.toLocaleString()+'</td>'+
+        '<td class="num">'+avgCost+'</td>'+
+        '<td class="num">'+s.price+'</td>'+
+        '<td class="num plv">'+(spl>=0?"+":"")+fmt(spl).replace("$","")+'</td>'+
+        '<td class="num plv">'+pct+'%</td>'+
+        '</tr>';
+    }).join("");
+
+    document.getElementById("stockCashDisplay").textContent = fmt(state.stockCash);
+    var cashEl = document.getElementById("stockCashDisplay");
+    cashEl.style.color = state.stockCash < 0 ? "var(--danger)" : "var(--text)";
+    document.getElementById("stockCashAsOf").textContent = "資金基準日：" + state.stockCashAsOf;
+
+    var buySel = document.getElementById("buyTarget");
+    buySel.innerHTML = state.stocks.map(function(s,i){ return '<option value="'+i+'">'+s.name+(s.code?' ('+s.code+')':'')+'</option>'; }).join("")
+      + '<option value="new">＋ 新股票</option>';
+    document.getElementById("buyNewFields").hidden = buySel.value !== "new";
+    if(!document.getElementById("buyDate").value) document.getElementById("buyDate").value = todayISO;
+    updateBuyPreview();
+
+    var histEl = document.getElementById("buyHistory");
+    var recent = state.stockBuys.slice(-5).reverse();
+    if(!recent.length){ histEl.innerHTML = ""; }
+    else{
+      histEl.innerHTML = '<div class="section-title" style="margin:8px 0 4px;font-size:11px;">最近買進紀錄</div>' +
+        recent.map(function(b){
+          return '<div class="list-item"><div class="meta"><div class="name">'+b.name+'</div>'+
+            '<div class="sub">'+b.date+' · '+b.shares.toLocaleString()+' 股 @ '+b.price+'</div></div>'+
+            '<div class="amt num" style="color:var(--danger);">-'+fmt(b.total)+'</div></div>';
+        }).join("");
+    }
+
+    var sellSel = document.getElementById("sellTarget");
+    if(!state.stocks.length){
+      sellSel.innerHTML = '<option value="">（目前沒有持股）</option>';
+    } else {
+      sellSel.innerHTML = state.stocks.map(function(s,i){ return '<option value="'+i+'">'+s.name+(s.code?' ('+s.code+')':'')+' — 現有 '+s.shares.toLocaleString()+' 股</option>'; }).join("");
+    }
+    if(!document.getElementById("sellDate").value) document.getElementById("sellDate").value = todayISO;
+    updateSellPreview();
+
+    var sellHistEl = document.getElementById("sellHistory");
+    var recentSells = state.stockSells.slice(-5).reverse();
+    if(!recentSells.length){ sellHistEl.innerHTML = ""; }
+    else{
+      sellHistEl.innerHTML = '<div class="section-title" style="margin:8px 0 4px;font-size:11px;">最近賣出紀錄</div>' +
+        recentSells.map(function(s){
+          return '<div class="list-item"><div class="meta"><div class="name">'+s.name+'</div>'+
+            '<div class="sub">'+s.date+' · '+s.shares.toLocaleString()+' 股 @ '+s.price+' · 已實現'+(s.realized>=0?'+':'')+fmt(s.realized).replace("$","")+'</div></div>'+
+            '<div class="amt num" style="color:var(--success);">+'+fmt(s.total)+'</div></div>';
+        }).join("");
+    }
+  }
+
+  document.getElementById("sellTarget").addEventListener("change", updateSellPreview);
+  function updateSellPreview(){
+    var idx = document.getElementById("sellTarget").value;
+    var shares = Number(document.getElementById("sellShares").value||0);
+    var price = Number(document.getElementById("sellPrice").value||0);
+    var total = shares*price;
+    document.getElementById("sellTotalPreview").textContent = fmt(total);
+    var plEl = document.getElementById("sellPlPreview");
+    if(idx === "" || idx === undefined){ plEl.textContent = fmt(0); return; }
+    var s = state.stocks[Number(idx)];
+    if(!s || !s.shares){ plEl.textContent = fmt(0); return; }
+    var avgCost = s.cost / s.shares;
+    var realized = total - avgCost*shares;
+    plEl.textContent = (realized>=0?"+":"") + fmt(realized);
+    plEl.style.color = realized>=0 ? "var(--success)" : "var(--danger)";
+  }
+  document.getElementById("sellShares").addEventListener("input", updateSellPreview);
+  document.getElementById("sellPrice").addEventListener("input", updateSellPreview);
+
+  document.getElementById("sellForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var idx = Number(document.getElementById("sellTarget").value);
+    var s = state.stocks[idx];
+    if(!s){ alert("請先選擇要賣出的股票"); return; }
+    var shares = Number(document.getElementById("sellShares").value||0);
+    var price = Number(document.getElementById("sellPrice").value||0);
+    var date = document.getElementById("sellDate").value || todayISO;
+    if(shares <= 0){ alert("股數要大於 0"); return; }
+    if(shares > s.shares) shares = s.shares;
+
+    var avgCost = s.cost / s.shares;
+    var costRemoved = avgCost * shares;
+    var total = Math.round(shares*price);
+    var realized = Math.round(total - costRemoved);
+
+    s.shares -= shares;
+    s.cost -= costRemoved;
+    if(s.shares <= 0.0001){
+      state.stocks.splice(idx,1);
+    }
+
+    state.stockCash = Number(state.stockCash||0) + total;
+    state.stockCashAsOf = todayISO;
+    state.stockSells.push({id:uid(), name:s.name, shares:shares, price:price, total:total, realized:realized, date:date});
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  document.getElementById("buyTarget").addEventListener("change", function(){
+    document.getElementById("buyNewFields").hidden = this.value !== "new";
+  });
+  function updateBuyPreview(){
+    var shares = Number(document.getElementById("buyShares").value||0);
+    var price = Number(document.getElementById("buyPrice").value||0);
+    document.getElementById("buyTotalPreview").textContent = fmt(shares*price);
+  }
+  document.getElementById("buyShares").addEventListener("input", updateBuyPreview);
+  document.getElementById("buyPrice").addEventListener("input", updateBuyPreview);
+
+  document.getElementById("buyForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var shares = Number(document.getElementById("buyShares").value||0);
+    var price = Number(document.getElementById("buyPrice").value||0);
+    var date = document.getElementById("buyDate").value || todayISO;
+    var total = Math.round(shares*price);
+    var target = document.getElementById("buyTarget").value;
+    var name;
+    if(target === "new"){
+      name = document.getElementById("buyNewName").value.trim();
+      if(!name){ alert("請輸入股票名稱"); return; }
+      state.stocks.push({
+        code: document.getElementById("buyNewCode").value.trim(),
+        name: name, shares: shares, cost: total, price: price
+      });
+    } else {
+      var s = state.stocks[Number(target)];
+      name = s.name;
+      s.shares = Number(s.shares||0) + shares;
+      s.cost = Number(s.cost||0) + total;
+      s.price = price;
+    }
+    state.stockCash = Number(state.stockCash||0) - total;
+    state.stockCashAsOf = todayISO;
+    state.stockBuys.push({id:uid(), name:name, shares:shares, price:price, total:total, date:date});
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  document.querySelector('[data-action="edit-stockcash"]').addEventListener("click", function(){
+    var v = prompt("輸入目前可購買股票資金", state.stockCash);
+    if(v === null) return;
+    var n = Number(v);
+    if(!isNaN(n)){
+      state.stockCash = n;
+      state.stockCashAsOf = todayISO;
+      save();
+      renderAll();
+    }
+  });
+
+  document.getElementById("stockForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    state.stocks.push({
+      code: document.getElementById("stkCode").value,
+      name: document.getElementById("stkName").value,
+      shares: Number(document.getElementById("stkShares").value||0),
+      cost: Number(document.getElementById("stkCost").value||0),
+      price: Number(document.getElementById("stkPrice").value||0)
+    });
+    save();
+    e.target.reset();
+    renderAll();
+  });
+
+  function openPriceUpdate(){
+    var el = document.getElementById("priceUpdateList");
+    el.innerHTML = state.stocks.map(function(s,i){
+      return '<div class="field" style="flex-direction:row;align-items:center;gap:8px;">'+
+        '<label style="min-width:110px;flex:0 0 auto;font-size:12.5px;">'+s.name+'</label>'+
+        '<input type="number" step="0.01" data-price-idx="'+i+'" value="'+s.price+'" style="flex:1;">'+
+        '</div>';
+    }).join("");
+    document.getElementById("priceUpdatePanel").hidden = false;
+    document.getElementById("priceUpdatePanel").scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+  document.querySelector('[data-action="open-price-update"]').addEventListener("click", openPriceUpdate);
+  document.querySelector('[data-action="close-price-update"]').addEventListener("click", function(){
+    document.getElementById("priceUpdatePanel").hidden = true;
+  });
+  document.querySelector('[data-action="save-price-update"]').addEventListener("click", function(){
+    document.querySelectorAll("[data-price-idx]").forEach(function(inp){
+      var idx = Number(inp.getAttribute("data-price-idx"));
+      var v = Number(inp.value);
+      if(!isNaN(v) && v > 0) state.stocks[idx].price = v;
+    });
+    state.stocksAsOf = todayISO;
+    save();
+    document.getElementById("priceUpdatePanel").hidden = true;
+    renderAll();
+  });
+
+  /* ---------------- BUDGET ---------------- */
+  // 本月支出分類甜甜圈圖：固定支出（已排定金額）+ 變動支出（本月實際）+ 其他未分類支出，不含「儲蓄」轉帳
+  function renderCategoryChart(box){
+    if(!box) return 0;
+    var mk = monthKey(today);
+    var catTotals = [];
+    state.categories.fixed.forEach(function(cat){
+      var amt = state.fixedExpenses.filter(function(f){return f.category===cat;})
+        .reduce(function(a,f){return a+(f.isMedical?monthlyEquivalent(f):effectiveMonthlyAmount(f));},0);
+      if(amt>0) catTotals.push({name:cat, amount:amt});
+    });
+    state.categories.variable.forEach(function(v){
+      var amt = sum(state.transactions.filter(function(t){
+        return t.type==="expense" && t.category===v.name && t.date.slice(0,7)===mk;
+      }));
+      if(amt>0) catTotals.push({name:v.name, amount:amt});
+    });
+    var knownCats = state.categories.fixed.concat(state.categories.variable.map(function(v){return v.name;}));
+    var extra = sum(state.transactions.filter(function(t){
+      return t.type==="expense" && t.date.slice(0,7)===mk && t.category!=="儲蓄" && knownCats.indexOf(t.category)===-1;
+    }));
+    if(extra>0) catTotals.push({name:"其他支出", amount: extra});
+
+    catTotals.sort(function(a,b){ return b.amount-a.amount; });
+    if(catTotals.length>8){
+      var folded = catTotals.slice(7).reduce(function(a,c){return a+c.amount;},0);
+      catTotals = catTotals.slice(0,7);
+      catTotals.push({name:"其他", amount: folded});
+    }
+
+    var total = catTotals.reduce(function(a,c){return a+c.amount;},0);
+    if(!total){ box.innerHTML = '<div class="empty">本月還沒有支出紀錄</div>'; return 0; }
+
+    var size=176, r=68, cx=size/2, cy=size/2, sw=24, C=2*Math.PI*r;
+    var gapDeg = catTotals.length>1 ? 3 : 0;
+    var gapLen = (gapDeg/360)*C;
+    var cumDeg = 0;
+    var segs = "";
+    catTotals.forEach(function(c,i){
+      var frac = c.amount/total;
+      var deg = frac*360;
+      var segLen = Math.max(0, (deg/360)*C - gapLen);
+      var dashoffset = -(cumDeg/360)*C;
+      segs += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+chartColor(i)+'" stroke-width="'+sw+'" '+
+        'stroke-dasharray="'+segLen.toFixed(2)+' '+(C-segLen).toFixed(2)+'" stroke-dashoffset="'+dashoffset.toFixed(2)+'" '+
+        'transform="rotate(-90 '+cx+' '+cy+')"></circle>';
+      cumDeg += deg;
+    });
+
+    var legend = catTotals.map(function(c,i){
+      var pct = Math.round(c.amount/total*100);
+      return '<div class="row" style="margin-top:7px;">'+
+        '<div style="display:flex;align-items:center;gap:8px;min-width:0;">'+
+          '<span style="width:12px;height:12px;border-radius:4px;background:'+chartColor(i)+';flex:0 0 auto;"></span>'+
+          '<span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+categoryIcon(c.name)+' '+c.name+'</span>'+
+        '</div>'+
+        '<span class="num" style="font-size:13px;color:var(--text-dim);flex:0 0 auto;">'+fmt(c.amount)+' · '+pct+'%</span>'+
+      '</div>';
+    }).join("");
+
+    box.innerHTML =
+      '<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">'+
+        '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'" style="flex:0 0 auto;">'+segs+
+          '<text x="'+cx+'" y="'+(cy-6)+'" text-anchor="middle" font-size="11" style="fill:var(--text-dim);font-family:\'Noto Sans TC\',sans-serif;">本月支出</text>'+
+          '<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="17" style="fill:var(--text);font-weight:700;font-family:Manrope,sans-serif;">'+fmt(total)+'</text>'+
+        '</svg>'+
+        '<div style="flex:1;min-width:160px;">'+legend+'</div>'+
+      '</div>';
+    return total;
+  }
+
+  function renderBudget(){
+    renderCategoryChart(document.getElementById("categoryChart"));
+    var el = document.getElementById("budgetList");
+    var mk = monthKey(today);
+    var html = "";
+
+    html += '<div class="section-title" style="margin-top:0;">固定支出</div>';
+    state.categories.fixed.forEach(function(cat){
+      var budget = state.fixedExpenses.filter(function(f){return f.category===cat;}).reduce(function(a,f){return a+(f.isMedical?monthlyEquivalent(f):effectiveMonthlyAmount(f));},0);
+      var actual = budget; // fixed items are scheduled, treated as committed (already-skipped items count as 0)
+      html += budgetRow(cat, budget, actual);
+    });
+
+    html += '<div class="section-title">變動支出</div>';
+    state.categories.variable.forEach(function(v){
+      var actual = sum(state.transactions.filter(function(t){
+        return t.type==="expense" && t.category===v.name && t.date.slice(0,7)===mk;
+      }));
+      html += budgetRow(v.name, v.budget, actual);
+    });
+
+    el.innerHTML = html;
+    renderCategoryList();
+    renderMedicalCard();
+  }
+
+  function budgetRow(name, budget, actual){
+    var pct = budget ? Math.min(100, Math.round(actual/budget*100)) : 0;
+    var over = actual > budget;
+    return '<div>'+
+      '<div class="row"><span style="font-weight:700;font-size:13.5px;">'+categoryIcon(name)+' '+name+'</span>'+
+      '<span class="num" style="font-size:13px;color:'+(over?"var(--danger)":"var(--text-dim)")+';">'+fmt(actual)+' / '+fmt(budget)+'</span></div>'+
+      '<div class="bar-track" style="margin-top:6px;"><div class="bar-fill '+(over?"danger":pct>85?"warning":"")+'" style="width:'+pct+'%;"></div></div>'+
+      '</div>';
+  }
+
+  function renderCategoryList(){
+    var el = document.getElementById("categoryList");
+    var html = state.categories.fixed.map(function(c){
+      return '<div class="list-item"><div class="meta"><div class="name">'+categoryIcon(c)+' '+c+'</div><div class="sub">固定支出分類</div></div>'+
+        '<button class="iconbtn" data-del-cat="fixed:'+c+'" aria-label="刪除">✕</button></div>';
+    }).join("");
+    html += state.categories.variable.map(function(v){
+      return '<div class="list-item"><div class="meta"><div class="name">'+categoryIcon(v.name)+' '+v.name+'</div><div class="sub">變動支出 · 預算 '+fmt(v.budget)+'</div></div>'+
+        '<button class="iconbtn" data-del-cat="variable:'+v.name+'" aria-label="刪除">✕</button></div>';
+    }).join("");
+    el.innerHTML = html || '<div class="empty">尚無分類</div>';
+    el.querySelectorAll("[data-del-cat]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var parts = b.getAttribute("data-del-cat").split(":");
+        if(parts[0]==="fixed"){
+          state.categories.fixed = state.categories.fixed.filter(function(c){return c!==parts[1];});
+        } else {
+          state.categories.variable = state.categories.variable.filter(function(v){return v.name!==parts[1];});
+        }
+        save(); renderAll();
+      });
+    });
+  }
+
+  document.getElementById("catGroup").addEventListener("change", function(){
+    document.getElementById("catBudgetField").style.display = this.value==="variable" ? "flex" : "none";
+  });
+
+  document.getElementById("categoryForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = document.getElementById("catName").value.trim();
+    var group = document.getElementById("catGroup").value;
+    if(!name) return;
+    if(group === "fixed"){
+      if(state.categories.fixed.indexOf(name)===-1) state.categories.fixed.push(name);
+    } else {
+      if(!state.categories.variable.some(function(v){return v.name===name;})){
+        state.categories.variable.push({name:name, budget:Number(document.getElementById("catBudget").value||0)});
+      }
+    }
+    save();
+    e.target.reset();
+    document.getElementById("catBudgetField").style.display = "flex";
+    renderAll();
+  });
+
+  function renderMedicalCard(){
+    var mc = state.medicalCrunch;
+    var box = document.getElementById("medicalCard");
+    var pct = Math.min(100, Math.round(mc.saved/mc.target*100));
+    box.innerHTML =
+      '<div class="row"><span style="font-size:13.5px;font-weight:700;">已存 / 目標</span>'+
+      '<span class="num">'+fmt(mc.saved)+' / '+fmt(mc.target)+'</span></div>'+
+      '<div class="bar-track" style="margin-top:8px;"><div class="bar-fill warning" style="width:'+pct+'%;"></div></div>'+
+      '<div class="sub" style="font-size:12px;color:var(--text-dim);margin-top:8px;">10、11、12月每月建議存 '+fmt(mc.monthlySuggested)+'，12月底繳款，一般儲蓄目標暫停</div>'+
+      '<div class="field" style="margin-top:12px;"><label>更新已存金額</label>'+
+      '<input type="number" id="medicalSavedInput" value="'+mc.saved+'" min="0"></div>'+
+      '<button class="btn secondary block" id="saveMedicalBtn" style="margin-top:8px;">儲存</button>';
+    document.getElementById("saveMedicalBtn").addEventListener("click", function(){
+      mc.saved = Number(document.getElementById("medicalSavedInput").value||0);
+      save(); renderAll();
+    });
+  }
+
+  /* ---------------- balance edit ---------------- */
+  document.querySelector('[data-action="edit-balance"]').addEventListener("click", function(){
+    var v = prompt("輸入目前帳戶餘額", state.accountBalance);
+    if(v === null) return;
+    var n = Number(v);
+    if(!isNaN(n)){
+      state.accountBalance = n;
+      state.balanceAsOf = todayISO;
+      save();
+      renderAll();
+    }
+  });
+
+  /* ---------------- backup ---------------- */
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "jingjing-vault-" + todayISO + ".json";
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  });
+  document.getElementById("importBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+  document.getElementById("importFile").addEventListener("change", function(e){
+    var f = e.target.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var data = JSON.parse(r.result);
+        if(!data || typeof data !== "object" || !data.categories) throw new Error("bad");
+        state = ensureShape(data);
+        save(); renderAll();
+        alert("匯入完成");
+      }catch(err){ alert("這不是有效的備份檔"); }
+      e.target.value = "";
+    };
+    r.readAsText(f);
+  });
+
+  /* ---------------- render all ---------------- */
+  function renderAll(){
+    fillCategorySelect(document.getElementById("fxCategory"));
+    renderLogForm();
+    renderOverview();
+    renderLog();
+    renderIncomeList();
+    renderFixedList();
+    renderCards();
+    renderStocks();
+    renderBudget();
+  }
+
+  renderAll();
+  persistLocal();
+  initSync();
+
+})();
+</script>
+
+</body></html>
