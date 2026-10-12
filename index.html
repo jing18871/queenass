@@ -600,6 +600,7 @@ function startDateYearsAgo(y){
   return d.toISOString().slice(0,10);
 }
 
+function numStr(x){ return parseFloat(String(x).replace(/,/g,'')); } // 證交所數字常帶千分位逗號（例如 2,045.00），直接 parseFloat 會被截斷成 2
 function rocDateToISO(roc){
   // "115/10/02" -> "2026-10-02"
   const [y,m,d] = roc.split('/');
@@ -619,8 +620,8 @@ async function fetchLatestTwsePrice(stockNo){
         // fields: 日期,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數
         return {
           dateISO: rocDateToISO(last[0]),
-          open: parseFloat(last[3]), high: parseFloat(last[4]), low: parseFloat(last[5]),
-          close: parseFloat(last[6]), change: last[7], source:'證交所官方'
+          open: numStr(last[3]), high: numStr(last[4]), low: numStr(last[5]),
+          close: numStr(last[6]), change: last[7], source:'證交所官方'
         };
       }
     }catch(e){ /* try previous month */ }
@@ -647,7 +648,7 @@ async function fetchTwsePriceOnOrBefore(stockNo, targetDateISO){
     try{
       const j = await fetchJSON(url);
       if(j && j.data && j.data.length){
-        const rows = j.data.map(r=>({dateISO: rocDateToISO(r[0]), close: parseFloat(r[6])}));
+        const rows = j.data.map(r=>({dateISO: rocDateToISO(r[0]), close: numStr(r[6])}));
         const eligible = back===0 ? rows.filter(r=>r.dateISO<=targetDateISO) : rows;
         if(eligible.length) return eligible[eligible.length-1];
       }
@@ -734,7 +735,7 @@ async function ensureBwibbuCache(){
     bwibbuCache = {};
     if(j && j.data){
       j.data.forEach(row=>{
-        const pe = parseFloat(row[2]);
+        const pe = numStr(row[2]);
         if(!isNaN(pe) && pe>0) bwibbuCache[row[0]] = pe;
       });
     }
