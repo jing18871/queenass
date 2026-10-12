@@ -131,6 +131,16 @@
   .profile-card .pc-links{display:flex; flex-wrap:wrap; gap:8px; font-size:13px;}
   .profile-card .pc-links a{color:var(--accent-deep); border:1px solid var(--line); border-radius:8px; padding:4px 10px; text-decoration:none; background:var(--paper-2);}
   .profile-card .pc-note{font-size:11.5px; color:var(--text-soft); line-height:1.7;}
+
+  .scr-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .scr-table th,.scr-table td{border-bottom:1px solid var(--line); padding:7px 6px; text-align:right; vertical-align:top;}
+  .scr-table th:first-child,.scr-table td:first-child{text-align:left;}
+  .scr-table th{font-size:11.5px; color:var(--text-soft); font-weight:700; white-space:nowrap;}
+  .scr-table td.pass{color:var(--good); font-weight:700;} .scr-table td.fail{color:var(--bad); font-weight:700;}
+  .scr-table .sub{display:block; font-size:10.5px; color:var(--text-soft); font-weight:400;}
+  .scr-table details{text-align:left; font-size:11px; color:var(--text-soft);}
+  .scr-wrap{overflow-x:auto;}
+  textarea.scr-input{font:inherit; font-family:"JetBrains Mono",monospace; font-size:13px; width:100%; min-height:84px; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--text);}
   [hidden]{display:none !important;}
 </style>
 </head>
@@ -251,6 +261,34 @@
     </div>
   </section>
 
+
+  <!-- 914 營收成長名單驗算 -->
+  <section class="gate" id="screen914">
+    <div class="gate-head">
+      <div class="gate-no">＋</div>
+      <div class="gate-title-wrap">
+        <div class="gate-title">附加工具 — 914 營收成長名單驗算</div>
+        <div class="gate-desc">逐月驗算「7、8、9 月每月：單月營收 &gt; 股本、年增率 &gt; 0、月增率 &gt; 0」共九項條件。輸入一份股票名單（不做全市場掃描），營收自動從 FinMind 取得；純輔助判讀，不計入四關評分。</div>
+      </div>
+    </div>
+    <div class="gate-body">
+      <div class="formula"><b>九項條件</b>＝(7、8、9月) × [單月營收 &gt; 股本 ・ 年增率 &gt; 0 ・ 月增率 &gt; 0]，任何一項沒過就不通過<br>
+        <b>營收／股本倍數</b>＝單月營收（億）÷ 股本（億），取三個月最低值；判斷一律用未四捨五入的原始數值<br>
+        <b>注意</b>：每股面額不是 10 元的公司（例如長科 0.4 元、國巨 2.5 元、長華 1 元），股本較小，倍數會偏高，不能直接代表獲利能力。</div>
+      <div class="field"><label>股票名單（代號以空白、逗號或換行分隔；可寫成「代號:股本億」手動指定股本，例如 6903:6.67）</label>
+        <textarea class="scr-input" id="scr-list"></textarea>
+        <span class="hint">未指定股本時：名單內建公司用 914 報告的 9/30 股本；其他公司取最近一季資產負債表的普通股股本（日期不是 9/30，會標示）。</span></div>
+      <div class="btn-row" style="justify-content:flex-start;">
+        <button type="button" class="check" onclick="load914Preset('pass')">載入 25 家通過名單＋巨漢</button>
+        <button type="button" class="check" style="background:var(--paper-2); color:var(--text); border:1px solid var(--line);" onclick="load914Preset('near')">載入 15 家接近未通過名單</button>
+        <button type="button" class="check" onclick="run914Screen()">開始驗算</button>
+        <span class="verdict-line" id="scr-status"></span>
+      </div>
+      <div class="scr-wrap"><table class="scr-table" id="scr-table" hidden></table></div>
+      <div class="flag" id="scr-note" style="border-color:var(--line); background:var(--paper-2); color:var(--text);" hidden></div>
+    </div>
+  </section>
+
   <!-- GATE 3 -->
   <section class="gate" id="gate3">
     <div class="gate-head">
@@ -354,6 +392,112 @@ async function fetchJSON(url){
   const res = await fetch(url);
   if(!res.ok) throw new Error('HTTP '+res.status);
   return res.json();
+}
+
+
+/* ---------------- 914 營收成長名單驗算 ---------------- */
+// [代號, 名稱, 9/30股本(億，914報告), 報告的7/8/9月倍數, 備註]
+const S914_PASS = [
+ ['6669','緯穎',18.58,[63.33,77.65,92.89]],['3036','文曄',127.06,[14.40,15.61,17.00]],['8299','群聯',22.12,[12.28,12.78,13.85]],
+ ['5289','宜鼎',9.83,[8.64,8.83,8.86]],['2376','技嘉',66.99,[6.60,7.08,9.42]],['2383','台光電',35.83,[5.36,5.62,6.01]],
+ ['3017','奇鋐',39.27,[4.73,4.96,5.35]],['3443','創意',13.40,[4.30,4.36,5.33]],['6548','長科*',3.80,[4.09,4.34,4.51],'面額0.4元'],
+ ['5274','信驊',4.16,[3.67,3.91,3.94]],['2327','國巨*',51.47,[3.13,3.17,3.32],'面額2.5元；採10/7增資前股本'],['8070','長華*',7.26,[3.08,3.08,3.16],'面額1元'],
+ ['3693','營邦',4.30,[2.85,2.95,3.58]],['6781','AES-KY',8.54,[2.02,2.05,2.06]],['6274','台耀',29.95,[1.97,1.98,2.05]],
+ ['6510','精測',3.29,[1.87,1.94,1.98]],['3034','聯詠',60.85,[1.69,1.70,1.70]],['3711','日月光投控',447.06,[1.65,1.84,1.97]],
+ ['4961','天鈺',12.13,[1.62,1.74,1.79]],['3023','信邦',24.01,[1.32,1.37,1.39]],['6213','聯茂',36.36,[1.31,1.39,1.60]],
+ ['3167','大量',8.95,[1.28,1.36,1.46]],['2360','致茂',42.52,[1.28,1.32,1.61]],['2408','南亞科',345.02,[1.27,1.30,1.31]],['6187','萬潤',9.83,[1.07,1.13,1.18]]
+];
+const S914_EXTRA = [['6903','巨漢',6.67,null,'股本取自 nStock（約6.67億，非9/30官方數字）']];
+const S914_NEAR = [['5434','崇越',19.40],['3037','欣興',164.13],['6672','騰輝電子-KY',8.23],['3189','景碩',52.69],['3450','聯鈞',14.57],['3162','精確',15.42],
+ ['2451','創見'],['4967','十銓'],['3135','凌航'],['6239','力成'],['8271','宇瞻'],['2395','研華'],['6414','樺漢'],['7711','永擎'],['3528','安馳']];
+
+function load914Preset(kind){
+  const rows = kind==='pass' ? S914_PASS.concat(S914_EXTRA) : S914_NEAR;
+  document.getElementById('scr-list').value = rows.map(r=>r[0]).join('\n');
+}
+
+// 純計算：rev/ly/prev 為 [7月,8月,9月]（單位：元），capital 為股本（億）
+function eval914(rev, ly, prev, capital){
+  const months = [7,8,9];
+  const rows = months.map((m,i)=>{
+    const r=rev[i], l=ly[i], p=prev[i];
+    if([r,l,p].some(v=>v===undefined||v===null||isNaN(v))) return {m, missing:true};
+    const revB = r/1e8;
+    const mult = revB/capital;
+    const yoy = r/l-1, mom = r/p-1;
+    return {m, revB, mult, yoy, mom, okCap: revB>capital, okYoy: yoy>0, okMom: mom>0};
+  });
+  const missing = rows.some(x=>x.missing);
+  const fails = [];
+  rows.forEach(x=>{ if(x.missing){ fails.push(x.m+'月：查無營收資料'); return; }
+    const f=[]; if(!x.okCap) f.push('營收≤股本'); if(!x.okYoy) f.push('年增≤0'); if(!x.okMom) f.push('月增≤0');
+    if(f.length) fails.push(x.m+'月：'+f.join('、')); });
+  const mults = rows.filter(x=>!x.missing).map(x=>x.mult);
+  return {rows, missing, pass: !missing && fails.length===0, fails, minMult: mults.length? Math.min(...mults) : null};
+}
+
+async function run914Screen(){
+  const st = document.getElementById('scr-status');
+  const tbl = document.getElementById('scr-table');
+  const note = document.getElementById('scr-note');
+  const text = document.getElementById('scr-list').value.trim();
+  if(!text){ st.textContent='請先輸入名單，或按上方按鈕載入預設名單'; return; }
+  const items = text.split(/[\s,，、]+/).filter(Boolean).map(t=>{ const [c,cap]=t.split(':'); return {code:c.replace(/\D/g,''), capManual: cap? parseFloat(cap): null}; }).filter(x=>x.code);
+  const preset = {}; S914_PASS.concat(S914_EXTRA, S914_NEAR).forEach(r=>{ preset[r[0]] = r; });
+  const Y = 2026;
+  const out = [];
+  tbl.hidden = true; note.hidden = true;
+  for(let i=0;i<items.length;i++){
+    const it = items[i]; const pr = preset[it.code];
+    st.textContent = '查詢中 '+(i+1)+'/'+items.length+'（'+it.code+'）…';
+    const rec = {code: it.code, name: pr? pr[1] : it.code, ref: pr && pr[3] ? pr[3] : null, par: pr && pr[4] ? pr[4] : null};
+    try{
+      const j = await fetchJSON(`${FINMIND}?dataset=TaiwanStockMonthRevenue&data_id=${it.code}&start_date=${(Y-1)}-05-01`);
+      const map = {}; (j.data||[]).forEach(r=>{ map[r.revenue_year*100+r.revenue_month] = r.revenue; });
+      const rev=[], ly=[], prev=[];
+      [7,8,9].forEach(m=>{ rev.push(map[Y*100+m]); ly.push(map[(Y-1)*100+m]); prev.push(map[Y*100+m-1]); });
+      let cap=null, capSrc='';
+      if(it.capManual){ cap=it.capManual; capSrc='手動輸入'; }
+      else if(pr && pr[2]){ cap=pr[2]; capSrc= it.code==='6903' ? '近似值（nStock）' : '914報告 9/30股本'; }
+      else {
+        try{
+          const b = await fetchJSON(`${FINMIND}?dataset=TaiwanStockBalanceSheet&data_id=${it.code}&start_date=${(Y-1)}-06-01`);
+          const rows = (b.data||[]).filter(r=>r.type==='OrdinaryShare');
+          if(rows.length){ rows.sort((a,b)=>a.date<b.date?-1:1); const last=rows[rows.length-1]; cap=last.value/1e8; capSrc='財報 '+last.date+'（非9/30）'; }
+        }catch(e){}
+      }
+      if(cap===null){ rec.err='查無股本，請用「代號:股本億」手動指定'; }
+      else { rec.cap=cap; rec.capSrc=capSrc; rec.res = eval914(rev, ly, prev, cap); rec.raw={rev,ly,prev}; }
+    }catch(e){ rec.err='查詢失敗：'+e.message; }
+    out.push(rec);
+    await new Promise(r=>setTimeout(r,120));
+  }
+  // 渲染
+  let h = '<thead><tr><th>股票</th><th>股本（億）</th><th>7月倍數</th><th>8月倍數</th><th>9月倍數</th><th>最低倍數</th><th>914報告最低</th><th>九項結果</th></tr></thead><tbody>';
+  let nPass=0, nCmp=0, nMatch=0;
+  out.forEach(r=>{
+    if(r.err){ h += '<tr><td>'+r.code+' '+r.name+'</td><td colspan="7" style="text-align:left;color:var(--bad);">'+r.err+'</td></tr>'; return; }
+    const e=r.res; if(e.pass) nPass++;
+    const cells = e.rows.map(x=> x.missing ? '<td>—</td>' : '<td class="'+(x.okCap?'pass':'fail')+'">'+x.mult.toFixed(2)+'</td>').join('');
+    let refCell='<td>—</td>';
+    if(r.ref && e.minMult!==null){
+      const rm = Math.min(...r.ref); nCmp++; const ok = Math.abs(Number(e.minMult.toFixed(2))-rm)<=0.0105;
+      if(ok) nMatch++;
+      refCell='<td class="'+(ok?'pass':'fail')+'">'+rm.toFixed(2)+(ok?' ✓相符(±0.01)':' ✗不同')+'</td>';
+    }
+    const det = e.rows.filter(x=>!x.missing).map(x=>x.m+'月：營收 '+x.revB.toFixed(2)+' 億，年增 '+(x.yoy*100).toFixed(2)+'%，月增 '+(x.mom*100).toFixed(2)+'%').join('<br>');
+    h += '<tr><td>'+r.code+' '+r.name+(r.par?'<span class="sub">'+r.par+'</span>':'')+'</td>'+
+      '<td>'+fmtNum(r.cap,2)+'<span class="sub">'+r.capSrc+'</span></td>'+cells+
+      '<td>'+(e.minMult===null?'—':e.minMult.toFixed(2))+'</td>'+refCell+
+      '<td class="'+(e.pass?'pass':'fail')+'" style="text-align:left;">'+(e.pass?'✓ 九項全過':'✗ 未通過')+
+      (e.fails.length? '<span class="sub">'+e.fails.join('；')+'</span>':'')+
+      '<details><summary>逐月明細</summary>'+det+'</details></td></tr>';
+  });
+  h += '</tbody>';
+  tbl.innerHTML = h; tbl.hidden = false;
+  st.textContent = '完成：共 '+out.length+' 檔，九項全過 '+nPass+' 檔';
+  note.hidden = false;
+  note.innerHTML = '資料來源：FinMind 月營收（合併營收，單位換算為億元）；股本依上表標示來源。'+(nCmp? ' 與 914 報告的「最低倍數」比對：'+nCmp+' 檔中 '+nMatch+' 檔相符（容許 ±0.01，因報告的股本只到小數兩位）。':'')+' 判斷使用未四捨五入的原始數值；股本日期不是 9/30 的公司，倍數可能與以 9/30 股本計算的結果有差異。';
 }
 
 function startDateYearsAgo(y){
