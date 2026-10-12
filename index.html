@@ -272,6 +272,38 @@
       </div>
     </div>
     <div class="gate-body">
+      <div class="formula">
+        <b>① 營收／股本倍數</b> ＝ 單月營收 ÷ 股本　　<b>通過條件：倍數 &gt; 1</b><br>
+        <b>② 年增率</b> ＝ 單月營收 ÷ 去年同月營收 − 1　　<b>通過條件：&gt; 0</b><br>
+        <b>③ 月增率</b> ＝ 單月營收 ÷ 上月營收 − 1　　<b>通過條件：&gt; 0</b><br>
+        <b>九項全過</b> ＝ 7、8、9 月 × (①②③) 共 9 項全部成立；<b>最低倍數</b> ＝ min(7月倍數, 8月倍數, 9月倍數)<br>
+        <span style="font-size:12px;">單位：營收與股本皆為「億元」；判斷用未四捨五入的原始數值；每股面額不是 10 元的公司（長科 0.4、國巨 2.5、長華 1），倍數會偏高，不代表獲利能力。</span>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>股票代號</label><input id="f914-code" type="text" placeholder="例如 6903" onkeydown="if(event.key==='Enter')fill914Formula()"></div>
+        <div class="field"><label></label><button type="button" class="check" style="width:100%;" onclick="fill914Formula()">📥 自動帶入營收與股本</button></div>
+        <div class="field"><label>股本（億）</label><input id="f914-cap" type="number" step="any" oninput="calc914Formula()"><span class="hint" id="hint-f914-cap"></span></div>
+      </div>
+      <div class="verdict-line" id="f914-status"></div>
+        <div class="field-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">
+          <div class="field"><label>7月 單月營收（億）</label><input id="f914-r7" type="number" step="any" oninput="calc914Formula()"></div>
+          <div class="field"><label>7月 去年同月營收（億）</label><input id="f914-l7" type="number" step="any" oninput="calc914Formula()"></div>
+          <div class="field"><label>7月 上月營收（億）</label><input id="f914-p7" type="number" step="any" oninput="calc914Formula()"></div>
+        </div>
+        <div class="field-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">
+          <div class="field"><label>8月 單月營收（億）</label><input id="f914-r8" type="number" step="any" oninput="calc914Formula()"></div>
+          <div class="field"><label>8月 去年同月營收（億）</label><input id="f914-l8" type="number" step="any" oninput="calc914Formula()"></div>
+          <div class="field"><label>8月 上月營收（億）</label><input id="f914-p8" type="number" step="any" oninput="calc914Formula()"></div>
+        </div>
+        <div class="field-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">
+          <div class="field"><label>9月 單月營收（億）</label><input id="f914-r9" type="number" step="any" oninput="calc914Formula()"></div>
+          <div class="field"><label>9月 去年同月營收（億）</label><input id="f914-l9" type="number" step="any" oninput="calc914Formula()"></div>
+          <div class="field"><label>9月 上月營收（億）</label><input id="f914-p9" type="number" step="any" oninput="calc914Formula()"></div>
+        </div>
+      <div class="result-grid" id="f914-out" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));"></div>
+      <div class="flag" id="f914-summary" style="border-color:var(--line); background:var(--paper-2); color:var(--text);" hidden></div>
+      <details style="border-top:1px solid var(--line); padding-top:14px;"><summary style="cursor:pointer; font-weight:700; font-size:13.5px;">名單驗算（多檔一次驗算）— 點此展開</summary>
+      <div style="display:flex; flex-direction:column; gap:18px; margin-top:14px;">
       <div class="formula"><b>九項條件</b>＝(7、8、9月) × [單月營收 &gt; 股本 ・ 年增率 &gt; 0 ・ 月增率 &gt; 0]，任何一項沒過就不通過<br>
         <b>營收／股本倍數</b>＝單月營收（億）÷ 股本（億），取三個月最低值；判斷一律用未四捨五入的原始數值<br>
         <b>注意</b>：每股面額不是 10 元的公司（例如長科 0.4 元、國巨 2.5 元、長華 1 元），股本較小，倍數會偏高，不能直接代表獲利能力。</div>
@@ -286,6 +318,7 @@
       </div>
       <div class="scr-wrap"><table class="scr-table" id="scr-table" hidden></table></div>
       <div class="flag" id="scr-note" style="border-color:var(--line); background:var(--paper-2); color:var(--text);" hidden></div>
+      </div></details>
     </div>
   </section>
 
@@ -498,6 +531,68 @@ async function run914Screen(){
   st.textContent = '完成：共 '+out.length+' 檔，九項全過 '+nPass+' 檔';
   note.hidden = false;
   note.innerHTML = '資料來源：FinMind 月營收（合併營收，單位換算為億元）；股本依上表標示來源。'+(nCmp? ' 與 914 報告的「最低倍數」比對：'+nCmp+' 檔中 '+nMatch+' 檔相符（容許 ±0.01，因報告的股本只到小數兩位）。':'')+' 判斷使用未四捨五入的原始數值；股本日期不是 9/30 的公司，倍數可能與以 9/30 股本計算的結果有差異。';
+}
+
+
+/* ---- 914 公式版（單檔） ---- */
+function f914v(id){ const el=document.getElementById(id); if(!el||el.value==='') return null; const v=parseFloat(el.value); return isNaN(v)? null : v; }
+function calc914Formula(){
+  const out=document.getElementById('f914-out'), sum=document.getElementById('f914-summary');
+  const cap=f914v('f914-cap');
+  const rev=[],ly=[],pv=[];
+  [7,8,9].forEach(m=>{ const r=f914v('f914-r'+m), l=f914v('f914-l'+m), p=f914v('f914-p'+m);
+    rev.push(r===null?null:r*1e8); ly.push(l===null?null:l*1e8); pv.push(p===null?null:p*1e8); });
+  if(cap===null || cap<=0){ out.innerHTML=''; sum.hidden=true; return; }
+  const e = eval914(rev,ly,pv,cap);
+  let okCount=0, html='';
+  e.rows.forEach((x,i)=>{
+    const m=x.m;
+    if(x.missing){ html += '<div class="result"><div class="k">'+m+'月</div><div class="v" style="font-size:13px;">待輸入三個營收數字</div></div>'; return; }
+    okCount += (x.okCap?1:0)+(x.okYoy?1:0)+(x.okMom?1:0);
+    const R=rev[i]/1e8, L=ly[i]/1e8, P=pv[i]/1e8;
+    const line=(label,formula,val,ok,th)=>'<div style="font-size:12.5px; line-height:1.7;"><span style="color:'+(ok?'var(--good)':'var(--bad)')+'; font-weight:700;">'+(ok?'✓':'✗')+'</span> <b>'+label+'</b>：'+formula+' = <b>'+val+'</b> <span class="th">（需 '+th+'）</span></div>';
+    html += '<div class="result" data-ok="'+((x.okCap&&x.okYoy&&x.okMom)?1:0)+'"><div class="k">'+m+'月</div>'+
+      line('倍數', fmtNum(R,4)+' ÷ '+fmtNum(cap,2), x.mult.toFixed(2), x.okCap, '&gt; 1')+
+      line('年增率', fmtNum(R,4)+' ÷ '+fmtNum(L,4)+' − 1', (x.yoy*100).toFixed(2)+'%', x.okYoy, '&gt; 0')+
+      line('月增率', fmtNum(R,4)+' ÷ '+fmtNum(P,4)+' − 1', (x.mom*100).toFixed(2)+'%', x.okMom, '&gt; 0')+'</div>';
+  });
+  out.innerHTML = html;
+  sum.hidden=false;
+  const mults = e.rows.filter(x=>!x.missing).map(x=>x.mult.toFixed(2));
+  sum.innerHTML = '<b>'+(e.missing? '資料不完整，尚無法判定' : (e.pass? '✓ 九項全過' : '✗ 未通過'))+'</b>　通過 '+okCount+' / '+(e.rows.filter(x=>!x.missing).length*3)+' 項'+
+    (e.minMult!==null? '　｜　最低倍數 = min('+mults.join(', ')+') = <b>'+e.minMult.toFixed(2)+'</b>':'')+
+    (e.fails.length? '<br>未通過項目：'+e.fails.join('；'):'');
+}
+
+async function fill914Formula(){
+  const code=(document.getElementById('f914-code').value||'').replace(/\D/g,'');
+  const st=document.getElementById('f914-status');
+  if(!code){ st.textContent='請先輸入股票代號'; return; }
+  st.textContent='查詢中…';
+  const Y=2026;
+  try{
+    const j=await fetchJSON(`${FINMIND}?dataset=TaiwanStockMonthRevenue&data_id=${code}&start_date=${Y-1}-05-01`);
+    const map={}; (j.data||[]).forEach(r=>{ map[r.revenue_year*100+r.revenue_month]=r.revenue; });
+    const put=(id,v)=>{ const el=document.getElementById(id); el.value = (v===undefined||v===null||isNaN(v))? '' : (Math.round(v/1e8*10000)/10000); if(el.value!=='') el.classList.add('auto'); };
+    let miss=[];
+    [7,8,9].forEach(m=>{ put('f914-r'+m,map[Y*100+m]); put('f914-l'+m,map[(Y-1)*100+m]); put('f914-p'+m,map[Y*100+m-1]); if(map[Y*100+m]===undefined) miss.push(m+'月'); });
+    // 股本
+    const preset={}; S914_PASS.concat(S914_EXTRA, S914_NEAR).forEach(r=>{ preset[r[0]]=r; });
+    const capEl=document.getElementById('f914-cap'); const hint=document.getElementById('hint-f914-cap');
+    let cap=null, src='';
+    if(preset[code] && preset[code][2]){ cap=preset[code][2]; src= code==='6903' ? '近似值（nStock，非9/30官方）' : '914報告 9/30 股本'; }
+    else{
+      try{
+        const b=await fetchJSON(`${FINMIND}?dataset=TaiwanStockBalanceSheet&data_id=${code}&start_date=${Y-1}-06-01`);
+        const rows=(b.data||[]).filter(r=>r.type==='OrdinaryShare').sort((a,b)=>a.date<b.date?-1:1);
+        if(rows.length){ const last=rows[rows.length-1]; cap=last.value/1e8; src='財報 '+last.date+'（非9/30）'; }
+      }catch(e){}
+    }
+    if(cap!==null){ capEl.value=Math.round(cap*100)/100; capEl.classList.add('auto'); hint.textContent=src; }
+    else { capEl.value=''; hint.textContent='⚠️查無股本，請手動輸入'; }
+    st.textContent = miss.length? '⚠️'+miss.join('、')+'營收尚未公布或查無資料，該月請手動輸入' : '已帶入 '+code+' 的 7/8/9 月營收（FinMind，換算為億元）；數字都可以手動修改';
+    calc914Formula();
+  }catch(e){ st.textContent='查詢失敗：'+e.message; }
 }
 
 function startDateYearsAgo(y){
