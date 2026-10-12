@@ -268,7 +268,7 @@
       <div class="gate-no">＋</div>
       <div class="gate-title-wrap">
         <div class="gate-title">附加工具 — 914 營收成長名單驗算</div>
-        <div class="gate-desc">逐月驗算「7、8、9 月每月：單月營收 &gt; 股本、年增率 &gt; 0、月增率 &gt; 0」共九項條件。輸入一份股票名單（不做全市場掃描），營收自動從 FinMind 取得；純輔助判讀，不計入四關評分。</div>
+        <div class="gate-desc">逐月驗算「7、8、9 月每月：單月營收 &gt; 股本、年增率 &gt; 0、月增率 &gt; 0」共九項條件。在最上方查詢股票時會一起帶入這檔的營收與股本並套用下面公式（也可手動修改數字）；下方可展開「名單驗算」一次驗算多檔。純輔助判讀，不計入四關評分。</div>
       </div>
     </div>
     <div class="gate-body">
@@ -280,8 +280,6 @@
         <span style="font-size:12px;">單位：營收與股本皆為「億元」；判斷用未四捨五入的原始數值；每股面額不是 10 元的公司（長科 0.4、國巨 2.5、長華 1），倍數會偏高，不代表獲利能力。</span>
       </div>
       <div class="field-grid">
-        <div class="field"><label>股票代號</label><input id="f914-code" type="text" placeholder="例如 6903" onkeydown="if(event.key==='Enter')fill914Formula()"></div>
-        <div class="field"><label></label><button type="button" class="check" style="width:100%;" onclick="fill914Formula()">📥 自動帶入營收與股本</button></div>
         <div class="field"><label>股本（億）</label><input id="f914-cap" type="number" step="any" oninput="calc914Formula()"><span class="hint" id="hint-f914-cap"></span></div>
       </div>
       <div class="verdict-line" id="f914-status"></div>
@@ -564,11 +562,12 @@ function calc914Formula(){
     (e.fails.length? '<br>未通過項目：'+e.fails.join('；'):'');
 }
 
-async function fill914Formula(){
-  const code=(document.getElementById('f914-code').value||'').replace(/\D/g,'');
+async function fill914Formula(codeArg){
+  // 由最上方的搜尋欄一起觸發（不另外單獨查詢）
+  const code=String(codeArg||'').replace(/\D/g,'');
   const st=document.getElementById('f914-status');
-  if(!code){ st.textContent='請先輸入股票代號'; return; }
-  st.textContent='查詢中…';
+  if(!code){ st.textContent='請先在最上方輸入股票代號並查詢'; return; }
+  st.textContent='查詢 '+code+' 的 7/8/9 月營收中…';
   const Y=2026;
   try{
     const j=await fetchJSON(`${FINMIND}?dataset=TaiwanStockMonthRevenue&data_id=${code}&start_date=${Y-1}-05-01`);
@@ -1070,6 +1069,7 @@ async function runAutoFetch(){
     }
 
     renderProfileCard(stockNo, currentStockMeta.name);
+    fill914Formula(stockNo).catch(()=>{});
 
     document.getElementById('tickerName').value = stockNo;
     if(gotAny){
