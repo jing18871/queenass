@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
+<meta name="build-id" content="2026-10-12-r11">
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>投資決策工作台</title>
@@ -899,6 +901,12 @@ async function runAutoFetch(){
       try{ const info = await ensureStockInfoCache(); const hit = info.find(r=>r.stock_id===stockNo); if(hit) stockName = hit.stock_name; }catch(e){}
     }
     currentStockMeta = {id: stockNo, name: stockName || stockNo};
+    // 換股票查詢時，先清掉上一檔留下的手填/推估欄位，避免沿用舊數字（之後會依新股票重新自動帶入）
+    ['g2-eps-fwd','g3-eps-bear','g3-eps-base','g3-eps-bull','g3-pe-bear','g3-pe-base','g3-pe-bull','pe-tool-eps-old','pe-tool-pe-old'].forEach(id=>{
+      const el=document.getElementById(id); if(el){ el.value=''; el.classList.remove('auto'); }
+      const h=document.getElementById('hint-'+id); if(h) h.textContent='';
+    });
+    const peConc=document.getElementById('pe-tool-conclusion'); if(peConc) peConc.hidden=true;
   }catch(e){
     setStatus('股票清單查詢失敗：'+e.message, 'err'); btn.disabled=false; return;
   }
@@ -1259,6 +1267,21 @@ document.getElementById('searchTicker').addEventListener('keydown', e=>{ if(e.ke
     document.getElementById('verdict-headline').textContent=head;
     document.getElementById('verdict-sub').textContent=sub;
   };
+})();
+</script>
+<script>
+/* 新版檢查：每次開啟時向伺服器確認最新版的 build-id，若與目前頁面不同就自動重新整理一次（避免看到舊快取） */
+(function(){
+  try{
+    var mine=(document.querySelector('meta[name="build-id"]')||{}).content;
+    fetch(location.pathname+'?_chk='+Date.now(),{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+      var m=t.match(/<meta name="build-id" content="([^"]+)"/);
+      if(!m||!mine||m[1]===mine) return;
+      var key='stockdesk-reloaded-'+m[1];
+      try{ if(sessionStorage.getItem(key)) return; sessionStorage.setItem(key,'1'); }catch(e){ return; }
+      location.reload();
+    }).catch(function(){});
+  }catch(e){}
 })();
 </script>
 </body>
