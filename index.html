@@ -525,11 +525,20 @@ async function fetchLatestTwsePrice(stockNo){
         return {
           dateISO: rocDateToISO(last[0]),
           open: parseFloat(last[3]), high: parseFloat(last[4]), low: parseFloat(last[5]),
-          close: parseFloat(last[6]), change: last[7]
+          close: parseFloat(last[6]), change: last[7], source:'證交所官方'
         };
       }
     }catch(e){ /* try previous month */ }
   }
+  // 證交所只收上市股票；上櫃/興櫃查不到時，改用 FinMind 股價（上市櫃皆有，但不是證交所官方）
+  try{
+    const start = new Date(); start.setDate(start.getDate()-20);
+    const j = await fetchJSON(`${FINMIND}?dataset=TaiwanStockPrice&data_id=${stockNo}&start_date=${start.toISOString().slice(0,10)}`);
+    if(j && j.data && j.data.length){
+      const last = j.data[j.data.length-1];
+      return { dateISO: last.date, open: last.open, high: last.max, low: last.min, close: last.close, change: last.spread, source:'FinMind（非證交所官方；上櫃股）' };
+    }
+  }catch(e){}
   return null;
 }
 
@@ -549,6 +558,15 @@ async function fetchTwsePriceOnOrBefore(stockNo, targetDateISO){
       }
     }catch(e){ /* 往前一個月再試 */ }
   }
+  // 證交所查無（例如上櫃股）→ 改用 FinMind 股價
+  try{
+    const st = new Date(target); st.setDate(st.getDate()-45);
+    const j = await fetchJSON(`${FINMIND}?dataset=TaiwanStockPrice&data_id=${stockNo}&start_date=${st.toISOString().slice(0,10)}&end_date=${targetDateISO}`);
+    if(j && j.data && j.data.length){
+      const last = j.data[j.data.length-1];
+      return {dateISO: last.date, close: last.close, source:'FinMind'};
+    }
+  }catch(e){}
   return null;
 }
 
@@ -574,7 +592,7 @@ async function fetchHistoricalPeBaseline(){
       fetchTwsePriceOnOrBefore(currentStockMeta.id, dateEl.value),
       Promise.resolve(ttmEpsAsOf(lastEpsRows, dateEl.value))
     ]);
-    if(!priceResult){ hint.textContent='⚠️查無該日期附近的證交所股價資料'; return; }
+    if(!priceResult){ hint.textContent='⚠️證交所與FinMind都查無該日期附近的股價資料'; return; }
     if(!epsResult || !epsResult.ttm){
       hint.textContent='⚠️查無該日期當時的近四季EPS資料（可能財報年度不夠久），股價已查到但本益比無法算，請自行填寫EPS';
       return;
@@ -794,14 +812,14 @@ async function runAutoFetch(){
     // 1) 官方股價 (TWSE OpenAPI)
     const price = await fetchLatestTwsePrice(stockNo);
     if(price){
-      setVal('g4-h', price.high); setHint('g4-h', '證交所官方 '+price.dateISO);
-      setVal('g4-l', price.low); setHint('g4-l', '證交所官方 '+price.dateISO);
-      setVal('g4-c', price.close); setHint('g4-c', '證交所官方 '+price.dateISO);
-      setVal('g2-price', price.close); setHint('g2-price', '證交所官方收盤 '+price.dateISO);
-      document.getElementById('dataDate').value = price.dateISO + '（證交所官方收盤）';
+      setVal('g4-h', price.high); setHint('g4-h', price.source+' '+price.dateISO);
+      setVal('g4-l', price.low); setHint('g4-l', price.source+' '+price.dateISO);
+      setVal('g4-c', price.close); setHint('g4-c', price.source+' '+price.dateISO);
+      setVal('g2-price', price.close); setHint('g2-price', price.source+' 收盤 '+price.dateISO);
+      document.getElementById('dataDate').value = price.dateISO + '（'+price.source+'收盤）';
       computeGate(4);
     } else {
-      setHint('g4-h','⚠️證交所API查無本月/上月資料，請自行確認代號');
+      setHint('g4-h','⚠️證交所與FinMind都查無近期股價，請自行確認代號並手動填入股價');setHint('g2-price','⚠️查無最新收盤價，請手動填入，不要沿用舊價');
     }
 
     // 2) FinMind 財報
